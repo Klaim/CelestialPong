@@ -5,6 +5,8 @@ mod ball;
 mod capsule;
 mod quad_tree;
 
+use std::cmp;
+
 use macroquad::{
     color::{self, colors},
     prelude::*,
@@ -19,20 +21,22 @@ extern crate rand;
 use crate::ball::*;
 use crate::quad_tree::*;
 
-const NB_BALLS: usize = 500;
-const RADII: f32 = 2.;
-const BALL_MASS: f32 = 2.;
+const NB_BALLS: usize = 300;
+const RADII: f32 = 3.;
+const BALL_MASS: f32 = 4.;
 
-const GRAVITY: f32 = 15000.;
+const GRAVITY: f32 = 10.;
 const BODY_BOUNCYNESS: f32 = 0.9;
 
+const ORBIT_TRAP: f32 = 10.0;
+
 const MIN_START_ORBIT: f32 = 100.;
-const MAX_START_ORBIT: f32 = 400.;
+const MAX_START_ORBIT: f32 = 200.;
 
 const FPS_FRAMES: usize = 100;
 const TRACE_SIZE: usize = 1000;
 
-const SIMULATION_DT: f32 = 1. / 300.;
+const SIMULATION_DT: f32 = 1. / 120.;
 
 fn damping(pos: Vec2, target: Vec2, dt: f32, elasticity: f32) -> Vec2 {
     return (target - pos) / elasticity * dt;
@@ -44,7 +48,7 @@ fn get_gravity_force(ball: &Ball, body: &Ball) -> Vec2 {
 }
 
 fn get_gravity_radius_over_threshold(mass: f32, threshold: f32) -> f32 {
-    return (threshold / mass).sqrt();
+    return (mass * GRAVITY / threshold).sqrt();
 }
 
 fn get_orbital_velocity(b1: &Ball, b2: &Ball) -> Vec2 {
@@ -140,7 +144,7 @@ async fn main() {
 
     let tree_area = quad_tree::Rect::new(0., 0., play_area_size.x * 4., play_area_size.x * 4.);
 
-    let mut quad_tree;
+    let mut quad_tree = QuadTree::new(tree_area);
 
     let mut frame_per_frame: usize = 1;
 
@@ -151,13 +155,18 @@ async fn main() {
         Vec2::new(0., 0.),
         Vec2::ZERO,
         30.,
-        1000.,
+        100000.,
         color::WHITE,
         tree_area,
     ));
 
     let mut traces = [Vec2::ZERO; TRACE_SIZE];
     let mut trace_index = 0;
+
+    let main_camera = Camera2D {
+        zoom: Vec2::from((2. / WINDOW_SIZE[0], 2. / WINDOW_SIZE[1])),
+        ..Default::default()
+    };
 
     reset_balls(&mut balls, tree_area, &static_bodies, &mut rng);
 
@@ -206,22 +215,46 @@ async fn main() {
 
         let dt = SIMULATION_DT;
 
-        quad_tree = QuadTree::new(tree_area);
         if !paused {
             for _ in 0..frame_per_frame {
+                quad_tree = QuadTree::new(tree_area);
                 // Updating ball position
                 collided_balls.clear();
-                for index in 0..balls.len() {
-                    let ball = balls.get_mut(index).unwrap();
+                let nb_balls = balls.len();
+                for index in 0..nb_balls {
+                    let ball = balls.get(index).unwrap();
                     quad_tree.add(QuadTreeEntry::new(ball.position, index));
-
                     let mut local_force = Vec2::ZERO;
+
+                    // Comuting gravity
                     if selected_ball == None || selected_ball.unwrap() != index {
                         for body in &static_bodies {
                             local_force = local_force + get_gravity_force(ball, body)
                         }
                     }
 
+                    // Trapping ball in the nearest body
+                    match static_bodies.iter().min_by(|body, other| {
+                        (body.position - ball.position)
+                            .length_squared()
+                            .total_cmp(&(other.position - ball.position).length_squared())
+                    }) {
+                        Some(closest_body) => {
+                            let ideal_velocity = get_orbital_velocity(ball, closest_body);
+                            let delta = if ideal_velocity.dot(ball.velocity) > 0. {
+                                ideal_velocity - ball.velocity
+                            } else {
+                                ideal_velocity * -1. - ball.velocity
+                            };
+                            // If the ball velocity differ from the ideal orbit, nudge the ball toward that velocity
+                            if delta.length_squared() > ball.radius * ball.radius {
+                                local_force = local_force + (delta / delta.length()) * ORBIT_TRAP;
+                            }
+                        }
+                        _ => {}
+                    }
+
+                    let ball = balls.get_mut(index).unwrap();
                     // ball.update(dt, local_force);
                     ball.update_verlet(dt, local_force);
 
@@ -293,18 +326,36 @@ async fn main() {
                         }
                     }
                 }
+
+                balls_marked_for_delete.sort_unstable();
+                for index in balls_marked_for_delete.iter().rev() {
+                    balls.remove(*index);
+                    match selected_ball {
+                        Some(selected) => {
+                            if index == &selected {
+                                selected_ball = None;
+                            } else if index < &selected {
+                                selected_ball = Some(selected - 1);
+                            }
+                        }
+                        none => {}
+                    }
+                }
+
+                balls_marked_for_delete.clear();
             }
         }
 
         let (spx, spy) = mouse_position();
         let mouse_pos = Vec2::new(spx, spy);
+        let mouse_pos = main_camera.screen_to_world(mouse_pos);
         let mut near_balls = Vec::new();
         quad_tree.query_entries(
-            &quad_tree::Rect::new(spx, spy, RADII * 2., RADII * 2.),
+            &quad_tree::Rect::new(mouse_pos.x, mouse_pos.y, RADII * 2., RADII * 2.),
             &mut near_balls,
         );
 
-        let dist_check = RADII * RADII;
+        let dist_check = RADII * RADII * 9.;
         let under = near_balls
             .into_iter()
             .find(|b| (balls[b.payload].position - mouse_pos).length_squared() < dist_check);
@@ -325,18 +376,14 @@ async fn main() {
         match selected_ball {
             Some(ball_index) => {
                 let ball = balls.get_mut(ball_index).unwrap();
-                let force = damping(ball.position, mouse_pos, dt, 0.001);
-
+                let force = damping(ball.position, mouse_pos, dt, 0.05 * dt);
                 ball.set_velocity(force, dt);
             }
             _ => {}
         }
 
         if drawing_enabled {
-            set_camera(&Camera2D {
-                zoom: Vec2::from((2. / WINDOW_SIZE[0], 2. / WINDOW_SIZE[1])),
-                ..Default::default()
-            });
+            set_camera(&main_camera);
 
             for ball in &balls {
                 ball.draw();
@@ -355,6 +402,16 @@ async fn main() {
                 //     1.,
                 //     c,
                 // );
+
+                // draw sphere of influence
+                // let influence = get_gravity_radius_over_threshold(ball.mass, 0.001);
+                // draw_circle_lines(
+                //     ball.position.x,
+                //     ball.position.y,
+                //     influence,
+                //     1.,
+                //     colors::WHITE,
+                // );
             }
 
             for body in &static_bodies {
@@ -364,17 +421,17 @@ async fn main() {
             // quad_tree.debug_draw();
 
             // Draw trace objects
-            for trace in traces {
-                draw_circle(trace.x, trace.y, 1., colors::BLUE);
-            }
-
-            // match under {
-            //     Some(entry) => {
-            //         let b = balls[entry.payload];
-            //         draw_circle_lines(b.position.x, b.position.y, b.radius, 2., colors::GOLD);
-            //     }
-            //     _ => {}
+            // for trace in traces {
+            //     draw_circle(trace.x, trace.y, 1., colors::BLUE);
             // }
+
+            match under {
+                Some(entry) => {
+                    let b = balls[entry.payload];
+                    draw_circle_lines(b.position.x, b.position.y, b.radius + 3., 2., colors::GOLD);
+                }
+                _ => {}
+            }
         }
 
         set_default_camera();
@@ -400,13 +457,6 @@ async fn main() {
                 },
             );
         }
-
-        balls_marked_for_delete.sort_unstable();
-        for index in balls_marked_for_delete.iter().rev() {
-            balls.remove(*index);
-        }
-
-        balls_marked_for_delete.clear();
 
         next_frame().await
     }

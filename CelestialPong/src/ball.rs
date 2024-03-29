@@ -84,7 +84,7 @@ impl Ball {
     // Based on https://www.vobarian.com/collisions/2dcollisions2.pdf
     // The individual steps from the document are commented
     pub fn collide(&mut self, other: &mut Ball, dt: f32) {
-        const HEAT_DISIPATION: f32 = 0.5;
+        const HEAT_DISIPATION: f32 = 1.0;
         let pos_diff = self.position - other.position;
 
         // 1
