@@ -21,22 +21,25 @@ extern crate rand;
 use crate::ball::*;
 use crate::quad_tree::*;
 
-const NB_BALLS: usize = 300;
-const RADII: f32 = 3.;
-const BALL_MASS: f32 = 4.;
+const WINDOW_SIZE: [f32; 2] = [400., 400.];
+
+const NB_BALLS: usize = 1;
+const RADII: f32 = 6.;
+const BALL_MASS: f32 = 40.;
 
 const GRAVITY: f32 = 10.;
 const BODY_BOUNCYNESS: f32 = 0.9;
 
 const ORBIT_TRAP: f32 = 10.0;
+const ORBIT_TRAP_SIZE: f32 = 4.;
 
 const MIN_START_ORBIT: f32 = 100.;
-const MAX_START_ORBIT: f32 = 200.;
+const MAX_START_ORBIT: f32 = 201.;
 
 const FPS_FRAMES: usize = 100;
 const TRACE_SIZE: usize = 1000;
 
-const SIMULATION_DT: f32 = 1. / 120.;
+const SIMULATION_DT: f32 = 1. / 60.;
 
 fn damping(pos: Vec2, target: Vec2, dt: f32, elasticity: f32) -> Vec2 {
     return (target - pos) / elasticity * dt;
@@ -44,18 +47,36 @@ fn damping(pos: Vec2, target: Vec2, dt: f32, elasticity: f32) -> Vec2 {
 
 fn get_gravity_force(ball: &Ball, body: &Ball) -> Vec2 {
     let delta = body.position - ball.position;
-    return delta.normalize() * (body.mass * ball.mass) / delta.length().powf(2.) * GRAVITY;
+    return delta.normalize() * (body.mass) / delta.length().powf(2.) * GRAVITY;
 }
 
 fn get_gravity_radius_over_threshold(mass: f32, threshold: f32) -> f32 {
     return (mass * GRAVITY / threshold).sqrt();
 }
 
-fn get_orbital_velocity(b1: &Ball, b2: &Ball) -> Vec2 {
-    let delta = b2.position - b1.position;
+fn get_orbital_velocity(b1: &Ball, body: &Ball) -> Vec2 {
+    let delta = body.position - b1.position;
     let orbit_radius = delta.length();
-    let speed = (GRAVITY * (b2.mass * b1.mass) / orbit_radius).sqrt();
+    let speed = (GRAVITY * (body.mass) / orbit_radius).sqrt();
     return Vec2::from((delta.y, -delta.x)).normalize() * speed;
+}
+
+fn get_orbital_period(ball: &Ball, body: &Ball) -> f32 {
+    let delta = body.position - ball.position;
+    let orbit_radius = delta.length();
+    let a = orbit_radius * orbit_radius * orbit_radius;
+    let d = GRAVITY * body.mass;
+    let sqrt = (a / d).sqrt();
+    return 2. * std::f32::consts::PI * sqrt;
+}
+
+fn get_orbital_velocity_compensated(b1: &Ball, body: &Ball, dt: f32) -> Vec2 {
+    let base_vel = get_orbital_velocity(b1, body);
+    let next_position = b1.position + base_vel * dt;
+    let stepped_angle = get_orbital_period(b1, body) / dt;
+    let expected =
+        Vec2::from_angle(stepped_angle).rotate(b1.position - body.position) + body.position;
+    b1.position.rotate(rhs)
 }
 
 fn random_orbital_pos(
@@ -70,8 +91,6 @@ fn random_orbital_pos(
     let result = center + result * rad;
     return result;
 }
-
-const WINDOW_SIZE: [f32; 2] = [900., 900.];
 
 fn window_config() -> Conf {
     Conf {
@@ -114,14 +133,8 @@ fn reset_balls(
 
         // let ball_speed = Vec2::from((rng.gen::<f32>() * 20. - 10., rng.gen::<f32>() * 20. - 10.));
         let ball_speed = get_orbital_velocity(&ball, &static_bodies[0]);
-
+        println!("period : {}", get_orbital_period(&ball, &static_bodies[0]));
         ball.set_velocity(ball_speed, SIMULATION_DT);
-        // println!(
-        //     "{:?} | (x:{},y:{})",
-        //     ball.position - ball.prev_position,
-        //     ball.velocity.x,
-        //     ball.velocity.y
-        // );
         balls.push(ball);
     }
 }
@@ -139,6 +152,7 @@ async fn main() {
 
     let mut fps: [f32; FPS_FRAMES] = [0.; FPS_FRAMES];
     let mut fps_index: usize = 0;
+    let mut frame_count = 0;
 
     let mut selected_ball: Option<usize> = None;
 
@@ -155,7 +169,7 @@ async fn main() {
         Vec2::new(0., 0.),
         Vec2::ZERO,
         30.,
-        100000.,
+        10000000.,
         color::WHITE,
         tree_area,
     ));
@@ -191,6 +205,7 @@ async fn main() {
         if is_key_down(KeyCode::R) {
             selected_ball = None;
             paused = true;
+            frame_count = 0;
             rng = rand_chacha::ChaChaRng::seed_from_u64(1);
             reset_balls(&mut balls, tree_area, &static_bodies, &mut rng);
         }
@@ -217,6 +232,8 @@ async fn main() {
 
         if !paused {
             for _ in 0..frame_per_frame {
+                frame_count = frame_count + 1;
+
                 quad_tree = QuadTree::new(tree_area);
                 // Updating ball position
                 collided_balls.clear();
@@ -338,7 +355,7 @@ async fn main() {
                                 selected_ball = Some(selected - 1);
                             }
                         }
-                        none => {}
+                        None => {}
                     }
                 }
 
@@ -355,7 +372,7 @@ async fn main() {
             &mut near_balls,
         );
 
-        let dist_check = RADII * RADII * 9.;
+        let dist_check = RADII * RADII * 30.;
         let under = near_balls
             .into_iter()
             .find(|b| (balls[b.payload].position - mouse_pos).length_squared() < dist_check);
@@ -391,17 +408,17 @@ async fn main() {
                 // ball.get_collision_area().debug_draw(1., ball.color);
 
                 // Draw ideal orbit
-                // let mut c = ball.color;
-                // c.r = c.r - 10.;
-                // draw_poly_lines(
-                //     static_bodies[0].position.x,
-                //     static_bodies[0].position.y,
-                //     100,
-                //     (static_bodies[0].position - ball.position).length(),
-                //     0.,
-                //     1.,
-                //     c,
-                // );
+                let mut c = ball.color;
+                c.r = c.r - 10.;
+                draw_poly_lines(
+                    static_bodies[0].position.x,
+                    static_bodies[0].position.y,
+                    100,
+                    (static_bodies[0].position - ball.position).length(),
+                    0.,
+                    1.,
+                    c,
+                );
 
                 // draw sphere of influence
                 // let influence = get_gravity_radius_over_threshold(ball.mass, 0.001);
@@ -421,9 +438,9 @@ async fn main() {
             // quad_tree.debug_draw();
 
             // Draw trace objects
-            // for trace in traces {
-            //     draw_circle(trace.x, trace.y, 1., colors::BLUE);
-            // }
+            for trace in traces {
+                draw_circle(trace.x, trace.y, 1., colors::BLUE);
+            }
 
             match under {
                 Some(entry) => {
@@ -451,6 +468,16 @@ async fn main() {
                 &format!("Simulation speed : {}", frame_per_frame),
                 32.,
                 50.,
+                TextParams {
+                    font_size: 15,
+                    ..Default::default()
+                },
+            );
+
+            draw_text_ex(
+                &format!("Frame count : {}", frame_count),
+                32.,
+                65.,
                 TextParams {
                     font_size: 15,
                     ..Default::default()
