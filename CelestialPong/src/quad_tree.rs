@@ -44,6 +44,7 @@ impl Rect {
             || self.down < other.up);
     }
 
+    #[allow(dead_code)]
     pub fn debug_draw(&self, thickness: f32, color: Color) {
         draw_rectangle_lines(
             self.x - self.half_width,
@@ -162,6 +163,7 @@ impl QuadTree {
         }
     }
 
+    #[allow(dead_code)]
     pub fn debug_draw(&self) {
         let color = color::RED;
 

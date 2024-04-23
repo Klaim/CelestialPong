@@ -12,6 +12,7 @@ struct Capsule {
 // Computes closest points C1 and C2 of S1(s)=P1+s*(Q1-P1) and
 // S2(t)=P2+t*(Q2-P2), returning s and t. Function result is squared
 // distance between between S1(s) and S2(t)
+#[allow(dead_code)]
 fn distance_point_segment_squared(p1: Vec2, q1: Vec2, p2: Vec2, q2: Vec2) -> f32 {
     let d1 = q1 - p1; // Direction vector of segment S1
     let d2 = q2 - p2; // Direction vector of segment S2
@@ -74,7 +75,8 @@ fn distance_point_segment_squared(p1: Vec2, q1: Vec2, p2: Vec2, q2: Vec2) -> f32
 }
 
 impl Capsule {
-    fn new(p1: Vec2, p2: Vec2, r: f32, color: Color) -> Capsule {
+    #[allow(dead_code)]
+    pub fn new(p1: Vec2, p2: Vec2, r: f32, color: Color) -> Capsule {
         return Capsule {
             p1: p1,
             p2: p2,
@@ -83,7 +85,8 @@ impl Capsule {
         };
     }
 
-    fn draw(&self) {
+    #[allow(dead_code)]
+    pub fn draw(&self) {
         draw_circle_lines(self.p1.x, self.p1.y, self.radius, 2., self.color);
         draw_circle_lines(self.p2.x, self.p2.y, self.radius, 2., self.color);
         let dir = (self.p2 - self.p1).normalize();
@@ -106,7 +109,8 @@ impl Capsule {
         );
     }
 
-    fn overlap(caps1: Capsule, caps2: Capsule) -> bool {
+    #[allow(dead_code)]
+    pub fn overlap(caps1: Capsule, caps2: Capsule) -> bool {
         let dist = distance_point_segment_squared(caps1.p1, caps1.p2, caps2.p1, caps2.p2);
         let r = caps1.radius + caps2.radius;
         return dist <= (r * r);

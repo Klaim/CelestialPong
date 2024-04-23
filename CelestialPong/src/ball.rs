@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::quad_tree::{self, Rect};
+use crate::quad_tree::{self};
 
 #[derive(Clone, Copy, Debug)]
 pub struct Ball {
@@ -10,18 +10,10 @@ pub struct Ball {
     pub radius: f32,
     pub mass: f32,
     pub color: Color,
-    playing_field: Rect,
 }
 
 impl Ball {
-    pub fn new(
-        position: Vec2,
-        velocity: Vec2,
-        radius: f32,
-        mass: f32,
-        color: Color,
-        playing_field: Rect,
-    ) -> Ball {
+    pub fn new(position: Vec2, velocity: Vec2, radius: f32, mass: f32, color: Color) -> Ball {
         Ball {
             position,
             prev_position: position - velocity,
@@ -29,7 +21,6 @@ impl Ball {
             radius,
             mass,
             color,
-            playing_field,
         }
     }
 
@@ -44,21 +35,10 @@ impl Ball {
         draw_circle(pos.x, pos.y, self.radius, self.color);
     }
 
+    #[allow(dead_code)]
     pub fn update(&mut self, dt: f32, acc: Vec2) {
         self.velocity += acc * dt;
         let pos = self.position;
-
-        if pos.x < self.playing_field.left && self.velocity.x < 0.
-            || pos.x > self.playing_field.right && self.velocity.x > 0.
-        {
-            self.velocity.x *= -1.;
-        }
-
-        if pos.y < self.playing_field.up && self.velocity.y < 0.
-            || pos.y > self.playing_field.down && self.velocity.y > 0.
-        {
-            self.velocity.y *= -1.;
-        }
 
         self.prev_position = self.position;
         self.position = pos + self.velocity * dt;
