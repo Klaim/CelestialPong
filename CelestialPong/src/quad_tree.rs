@@ -3,7 +3,7 @@ use macroquad::{
     prelude::*,
 };
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Rect {
     pub x: f32,
     pub y: f32,
@@ -57,7 +57,7 @@ impl Rect {
     }
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct QuadTreeEntry {
     pub position: Vec2,
     pub payload: usize,
@@ -71,7 +71,7 @@ impl QuadTreeEntry {
 
 const QUADTREE_SIZE: usize = 1;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, PartialEq, Debug)]
 pub struct QuadTree {
     entries: [QuadTreeEntry; QUADTREE_SIZE],
     number_of_entries: usize,

@@ -6,7 +6,7 @@ use macroquad::{
 
 use crate::{ball::Ball, SIMULATION_DT};
 
-const GRAVITY: f32 = 10.;
+const GRAVITY: f32 = 1.;
 
 pub fn get_gravity_force(ball: &Ball, body: &Ball) -> Vec2 {
     let delta = body.position - ball.position;

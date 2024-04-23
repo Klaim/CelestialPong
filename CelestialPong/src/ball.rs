@@ -2,7 +2,7 @@ use macroquad::prelude::*;
 
 use crate::quad_tree::{self};
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Ball {
     pub position: Vec2,
     pub prev_position: Vec2,

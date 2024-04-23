@@ -7,8 +7,11 @@ mod gravity;
 mod level;
 mod quad_tree;
 mod sandbox_level;
+mod title_screen;
 
+use level::Level;
 use macroquad::{prelude::*, window};
+use title_screen::TitleScreen;
 
 use crate::sandbox_level::*;
 
@@ -30,7 +33,7 @@ fn window_config() -> Conf {
 async fn main() {
     let play_area_size = Vec2::new(window::screen_width(), window::screen_height());
 
-    let mut level = SandboxLevel::new(WINDOW_SIZE, play_area_size);
+    let mut level = Level::TitleScreen(TitleScreen::new(WINDOW_SIZE, play_area_size));
     level.init();
 
     let mut frame_per_frame: usize = 1;
@@ -54,8 +57,9 @@ async fn main() {
         fps[fps_index] = dt;
         fps_index = (fps_index + 1) % FPS_FRAMES;
 
+        let mut next_level = Level::None;
         for _frame in 0..frame_per_frame {
-            level.update();
+            next_level = level.update();
         }
 
         level.draw();
@@ -83,6 +87,11 @@ async fn main() {
                 },
             );
         }
+
+        level = match next_level {
+            Level::None => level,
+            _ => next_level,
+        };
 
         next_frame().await
     }

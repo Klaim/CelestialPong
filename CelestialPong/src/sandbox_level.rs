@@ -10,6 +10,7 @@ use macroquad::{
 use crate::{
     ball::*,
     gravity::{damping, get_gravity_force, get_orbital_velocity},
+    level::*,
 };
 use crate::{
     quad_tree::{self, *},
@@ -124,7 +125,7 @@ impl SandboxLevel {
         reset_balls(&mut self.balls, &self.static_bodies);
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> Level {
         if is_key_pressed(KeyCode::Space) {
             self.paused = !self.paused;
         }
@@ -322,6 +323,8 @@ impl SandboxLevel {
             }
             _ => {}
         }
+
+        return Level::None;
     }
 
     pub fn draw(&self) {
