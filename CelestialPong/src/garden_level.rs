@@ -18,20 +18,38 @@ use crate::{
     SIMULATION_DT,
 };
 
-const NB_BALLS: usize = 220;
-const RADII: f32 = 3.;
+const NB_BALLS: usize = 440;
+const BALL_RADII: f32 = 3.;
 const BALL_MASS: f32 = 40.;
 
-const BODY_MASS: f32 = 5000000.;
+const BODY_MASS: f32 = 10000000.;
 // const BODY_BOUNCYNESS: f32 = 0.9;
 
 const ORBIT_TRAP: f32 = 10.0;
-const ORBIT_TRAP_SIZE: f32 = RADII * RADII;
+const ORBIT_TRAP_SIZE: f32 = BALL_RADII * BALL_RADII;
 
-const MIN_START_ORBIT: f32 = 290.;
-const MAX_START_ORBIT: f32 = 301.;
+const MIN_START_ORBIT: f32 = 220.;
+const MAX_START_ORBIT: f32 = 321.;
 
 const TRACE_SIZE: usize = 1000;
+
+struct Player {
+    position: Vec2,
+    orientation: f32,
+}
+
+impl Player {
+    pub fn draw(&self) {
+        draw_poly(
+            self.position.x,
+            self.position.y,
+            3,
+            10.,
+            self.orientation,
+            colors::GOLD,
+        );
+    }
+}
 
 fn random_orbital_pos(center: Vec2, min_radius: f32, max_radius: f32) -> Vec2 {
     let angle = RandomRange::gen_range(0., std::f32::consts::PI * 2.);
@@ -48,22 +66,22 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
         let position =
             random_orbital_pos(static_bodies[0].position, MIN_START_ORBIT, MAX_START_ORBIT);
 
-        let color = match index < NB_BALLS / 2 {
+        let color = match index < NB_BALLS / 10 {
             true => Color {
                 r: 0.9,
-                g: 0.16,
-                b: 0.16,
+                g: 0.1,
+                b: 0.1,
                 a: 1.,
             },
             false => Color {
-                r: 0.9,
-                g: 0.9,
+                r: 0.75,
+                g: 0.75,
                 b: 0.9,
                 a: 1.,
             },
         };
 
-        let mut ball = Ball::new(position, Vec2::ZERO, RADII, BALL_MASS, color);
+        let mut ball = Ball::new(position, Vec2::ZERO, BALL_RADII, BALL_MASS, color);
 
         let ball_speed = get_orbital_velocity(&ball, &static_bodies[0]);
 
@@ -72,13 +90,14 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
     }
 }
 
-pub struct SandboxLevel {
+pub struct GardenLevel {
     paused: bool,
-    drawing_enabled: bool,
     balls: Vec<Ball>,
     static_bodies: Vec<Ball>,
     tree_area: quad_tree::Rect,
     quad_tree: QuadTree,
+
+    player: Player,
 
     main_camera: Camera2D,
     collided_balls: Vec<usize>,
@@ -86,22 +105,21 @@ pub struct SandboxLevel {
     selected_ball: Option<usize>,
     traces: [Vec2; TRACE_SIZE],
     trace_index: usize,
-    ball_under: Option<usize>,
+
+    kill_distance_squared: f32,
     level_parameters: LevelParameters,
 }
 
-impl SandboxLevel {
-    pub fn new(level_parameters: LevelParameters) -> SandboxLevel {
+impl GardenLevel {
+    pub fn new(level_parameters: LevelParameters) -> GardenLevel {
         let tree_area = quad_tree::Rect::new(
             0.,
             0.,
             level_parameters.play_area_size.x * 4.,
             level_parameters.play_area_size.x * 4.,
         );
-
-        return SandboxLevel {
+        return GardenLevel {
             paused: false,
-            drawing_enabled: true,
             balls: Vec::with_capacity(NB_BALLS),
             static_bodies: Vec::new(),
             tree_area,
@@ -115,13 +133,18 @@ impl SandboxLevel {
                 ..Default::default()
             },
 
+            player: Player {
+                position: Vec2::new(300., 300.),
+                orientation: 0.,
+            },
+
             collided_balls: Vec::with_capacity(NB_BALLS),
             balls_marked_for_delete: Vec::with_capacity(NB_BALLS),
             selected_ball: None,
             traces: [Vec2::ZERO; TRACE_SIZE],
             trace_index: 0,
-            ball_under: None,
             level_parameters,
+            kill_distance_squared: f32::powf(level_parameters.window_size[0] * f32::sqrt(2.), 2.),
         };
     }
 
@@ -129,7 +152,7 @@ impl SandboxLevel {
         self.static_bodies.push(Ball::new(
             Vec2::new(0., 0.),
             Vec2::ZERO,
-            30.,
+            90.,
             BODY_MASS,
             color::WHITE,
         ));
@@ -142,30 +165,11 @@ impl SandboxLevel {
             self.paused = !self.paused;
         }
 
-        if is_key_pressed(KeyCode::V) {
-            self.drawing_enabled = !self.drawing_enabled;
-        }
-
-        if is_key_down(KeyCode::S) {
-            for ball in &mut self.balls {
-                ball.set_velocity(ball.velocity * 0.5, SIMULATION_DT);
-            }
-        }
-
         if is_key_down(KeyCode::R) {
             self.selected_ball = None;
             self.paused = true;
             srand(1);
             reset_balls(&mut self.balls, &self.static_bodies);
-        }
-
-        if is_key_down(KeyCode::O) {
-            for ball in &mut self.balls {
-                ball.set_velocity(
-                    get_orbital_velocity(ball, &self.static_bodies[0]),
-                    SIMULATION_DT,
-                );
-            }
         }
 
         if is_key_pressed(KeyCode::Backspace) {
@@ -220,6 +224,11 @@ impl SandboxLevel {
                 // Recode previous positions
                 self.traces[self.trace_index] = ball.position;
                 self.trace_index = (self.trace_index + 1) % self.traces.len();
+
+                // Delete balls that have gone too far
+                if ball.position.length_squared() > self.kill_distance_squared {
+                    self.balls_marked_for_delete.push(index);
+                }
             }
 
             // Colliding balls
@@ -307,25 +316,30 @@ impl SandboxLevel {
         let (spx, spy) = mouse_position();
         let mouse_pos = Vec2::new(spx, spy);
         let mouse_pos = self.main_camera.screen_to_world(mouse_pos);
-        let dist_check = RADII * RADII * 10.;
+
+        let player_to_mouse = mouse_pos - self.player.position;
+        let player_orientation =
+            -player_to_mouse.normalize().angle_between(Vec2::X) / std::f32::consts::PI * 180.;
+        self.player.orientation = player_orientation;
+
+        let dist_check = BALL_RADII * BALL_RADII * 10.;
         let mut near_balls = Vec::new();
         self.quad_tree.query_entries(
             &quad_tree::Rect::new(mouse_pos.x, mouse_pos.y, dist_check, dist_check),
             &mut near_balls,
         );
 
-        self.ball_under = near_balls
-            .into_iter()
-            .find(|b| (self.balls[b.payload].position - mouse_pos).length_squared() < dist_check)
-            .map(|b| b.payload);
-
         if is_mouse_button_pressed(MouseButton::Left) {
-            match self.ball_under {
-                Some(entry) => {
-                    self.selected_ball = Some(entry);
-                }
-                _ => {}
-            }
+            let ball_vel = (mouse_pos - self.player.position).normalize() * 7.;
+            let ball = Ball::new(
+                self.player.position,
+                ball_vel,
+                BALL_RADII * 2.,
+                BALL_MASS * 2.,
+                colors::BLUE,
+            );
+
+            self.balls.push(ball);
         }
 
         if is_mouse_button_released(MouseButton::Left) {
@@ -345,59 +359,25 @@ impl SandboxLevel {
     }
 
     pub fn draw(&self) {
-        if self.drawing_enabled {
-            set_camera(&self.main_camera);
+        clear_background(Color::from_rgba(1, 0, 7, 255));
+        set_camera(&self.main_camera);
 
-            for ball in &self.balls {
-                ball.draw();
+        self.player.draw();
 
-                // ball.get_collision_area().debug_draw(1., ball.color);
-
-                // Draw ideal orbit
-                let mut c = ball.color;
-                c.r = c.r - 10.;
-                // draw_poly_lines(
-                //     static_bodies[0].position.x,
-                //     static_bodies[0].position.y,
-                //     100,
-                //     (static_bodies[0].position - ball.position).length(),
-                //     0.,
-                //     1.,
-                //     c,
-                // );
-
-                // draw sphere of influence
-                // let influence = get_gravity_radius_over_threshold(ball.mass, 0.001);
-                // draw_circle_lines(
-                //     ball.position.x,
-                //     ball.position.y,
-                //     influence,
-                //     1.,
-                //     colors::WHITE,
-                // );
-
-                // let v = get_orbital_velocity_compensated(ball, &static_bodies[0], dt);
-            }
-
-            for body in &self.static_bodies {
-                body.draw();
-            }
-
-            // quad_tree.debug_draw();
-
-            // Draw trace objects
-            // for trace in traces {
-            //     draw_circle(trace.x, trace.y, 1., colors::BLUE);
-            // }
-
-            match self.ball_under {
-                Some(entry) => {
-                    let b = self.balls[entry];
-                    draw_circle_lines(b.position.x, b.position.y, b.radius + 3., 2., colors::GOLD);
-                }
-                _ => {}
-            }
+        for ball in &self.balls {
+            ball.draw();
         }
+
+        for body in &self.static_bodies {
+            body.draw();
+        }
+
+        // quad_tree.debug_draw();
+
+        // Draw trace objects
+        // for trace in traces {
+        //     draw_circle(trace.x, trace.y, 1., colors::BLUE);
+        // }
 
         set_default_camera();
     }

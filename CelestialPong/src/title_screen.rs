@@ -1,28 +1,26 @@
 use macroquad::{
     input::{is_key_pressed, KeyCode},
-    math::Vec2,
     text::{draw_text_ex, TextParams},
 };
 
-use crate::{level::Level, SandboxLevel};
+use crate::{
+    levels::{Level, LevelParameters},
+    SandboxLevel,
+};
 
 #[derive(PartialEq)]
 pub struct TitleScreen {
-    window_size: [f32; 2],
-    play_area_size: Vec2,
+    level_parameters: LevelParameters,
 }
 
 impl TitleScreen {
-    pub fn new(window_size: [f32; 2], play_area_size: Vec2) -> TitleScreen {
-        return TitleScreen {
-            window_size,
-            play_area_size,
-        };
+    pub fn new(level_parameters: LevelParameters) -> TitleScreen {
+        return TitleScreen { level_parameters };
     }
 
     pub fn update(&self) -> Level {
         if is_key_pressed(KeyCode::Space) {
-            let mut level = SandboxLevel::new(self.window_size, self.play_area_size);
+            let mut level = SandboxLevel::new(self.level_parameters);
             level.init();
             return Level::SandboxLevel(level);
         }
@@ -36,7 +34,7 @@ impl TitleScreen {
         let width = title_label.len() as f32 * font_size;
         draw_text_ex(
             "Celestial Garden",
-            (&self.window_size[0] - width) / 2.,
+            (&self.level_parameters.window_size[0] - width) / 2.,
             200.,
             TextParams {
                 font_size: font_size as u16,

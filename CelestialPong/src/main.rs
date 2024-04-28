@@ -3,16 +3,19 @@
 
 mod ball;
 mod capsule;
+mod garden_level;
 mod gravity;
-mod level;
+mod levels;
 mod quad_tree;
 mod sandbox_level;
 mod title_screen;
 
-use level::Level;
+use levels::Level;
+use levels::LevelParameters;
 use macroquad::{prelude::*, window};
 use title_screen::TitleScreen;
 
+use crate::garden_level::*;
 use crate::sandbox_level::*;
 
 const WINDOW_SIZE: [f32; 2] = [1000., 1000.];
@@ -32,8 +35,12 @@ fn window_config() -> Conf {
 #[macroquad::main(window_config)]
 async fn main() {
     let play_area_size = Vec2::new(window::screen_width(), window::screen_height());
+    let level_parameters = LevelParameters {
+        play_area_size,
+        window_size: WINDOW_SIZE,
+    };
 
-    let mut level = Level::TitleScreen(TitleScreen::new(WINDOW_SIZE, play_area_size));
+    let mut level = Level::GardenLevel(GardenLevel::new(level_parameters));
     level.init();
 
     let mut frame_per_frame: usize = 1;

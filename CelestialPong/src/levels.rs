@@ -1,8 +1,11 @@
-use crate::{title_screen::TitleScreen, SandboxLevel};
+use macroquad::math::Vec2;
+
+use crate::{title_screen::TitleScreen, GardenLevel, SandboxLevel};
 
 pub enum Level {
     TitleScreen(TitleScreen),
     SandboxLevel(SandboxLevel),
+    GardenLevel(GardenLevel),
     None,
 }
 
@@ -10,6 +13,9 @@ impl Level {
     pub fn init(&mut self) {
         match self {
             Level::SandboxLevel(level) => {
+                level.init();
+            }
+            Level::GardenLevel(level) => {
                 level.init();
             }
             _ => {}
@@ -20,9 +26,11 @@ impl Level {
         match self {
             Level::TitleScreen(title) => title.update(),
             Level::SandboxLevel(level) => level.update(),
+            Level::GardenLevel(level) => level.update(),
             _ => Level::None,
         }
     }
+
     pub fn draw(&self) {
         match self {
             Level::TitleScreen(screen) => {
@@ -31,7 +39,16 @@ impl Level {
             Level::SandboxLevel(level) => {
                 level.draw();
             }
+            Level::GardenLevel(level) => {
+                level.draw();
+            }
             _ => {}
         }
     }
+}
+
+#[derive(PartialEq, Clone, Copy)]
+pub struct LevelParameters {
+    pub window_size: [f32; 2],
+    pub play_area_size: Vec2,
 }
