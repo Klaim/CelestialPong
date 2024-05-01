@@ -1,6 +1,6 @@
 use macroquad::math::Vec2;
 
-use crate::{title_screen::TitleScreen, GardenLevel, SandboxLevel};
+use crate::levels::{garden_level::*, sandbox_level::*, title_screen::*};
 
 pub enum Level {
     TitleScreen(TitleScreen),

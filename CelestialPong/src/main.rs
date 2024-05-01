@@ -1,22 +1,14 @@
 // based on https://github.com/Markek1/Collision-Simulator
 // other usefull link https://arrowinmyknee.com/2021/03/15/some-math-about-capsule-collision/
 
-mod ball;
-mod capsule;
-mod garden_level;
-mod gravity;
 mod levels;
-mod quad_tree;
-mod sandbox_level;
-mod title_screen;
+mod simulation;
+mod visual;
 
-use levels::Level;
-use levels::LevelParameters;
+use levels::levels::{Level, LevelParameters};
+use levels::title_screen::TitleScreen;
+
 use macroquad::{prelude::*, window};
-use title_screen::TitleScreen;
-
-use crate::garden_level::*;
-use crate::sandbox_level::*;
 
 const WINDOW_SIZE: [f32; 2] = [1000., 1000.];
 const FPS_FRAMES: usize = 100;
@@ -40,7 +32,7 @@ async fn main() {
         window_size: WINDOW_SIZE,
     };
 
-    let mut level = Level::GardenLevel(GardenLevel::new(level_parameters));
+    let mut level = Level::TitleScreen(TitleScreen::new(level_parameters));
     level.init();
 
     let mut frame_per_frame: usize = 1;
@@ -68,7 +60,6 @@ async fn main() {
         for _frame in 0..frame_per_frame {
             next_level = level.update();
         }
-
         level.draw();
 
         set_default_camera();
@@ -97,7 +88,10 @@ async fn main() {
 
         level = match next_level {
             Level::None => level,
-            _ => next_level,
+            _ => {
+                next_level.init();
+                next_level
+            }
         };
 
         next_frame().await

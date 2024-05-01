@@ -8,15 +8,10 @@ use macroquad::{
 };
 
 use crate::{
-    ball::*,
-    gravity::{damping, get_gravity_force, get_orbital_velocity},
-    levels::*,
-    title_screen::TitleScreen,
+    levels::{levels::*, title_screen::*},
+    simulation::{ball::*, gravity::*, quad_tree::*},
 };
-use crate::{
-    quad_tree::{self, *},
-    SIMULATION_DT,
-};
+use crate::{simulation::quad_tree, SIMULATION_DT};
 
 const NB_BALLS: usize = 220;
 const RADII: f32 = 3.;
@@ -154,7 +149,6 @@ impl SandboxLevel {
 
         if is_key_down(KeyCode::R) {
             self.selected_ball = None;
-            self.paused = true;
             srand(1);
             reset_balls(&mut self.balls, &self.static_bodies);
         }

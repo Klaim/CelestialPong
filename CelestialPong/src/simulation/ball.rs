@@ -1,6 +1,6 @@
 use macroquad::prelude::*;
 
-use crate::quad_tree::{self};
+use crate::simulation::quad_tree;
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Ball {

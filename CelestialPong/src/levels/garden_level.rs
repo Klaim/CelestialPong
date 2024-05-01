@@ -8,15 +8,11 @@ use macroquad::{
 };
 
 use crate::{
-    ball::*,
-    gravity::{damping, get_gravity_force, get_orbital_velocity},
-    levels::*,
-    title_screen::TitleScreen,
+    levels::{levels::*, title_screen::*},
+    simulation::{ball::*, gravity::*, quad_tree::*},
+    visual::radial_gradiant::get_radial_gradient_texture,
 };
-use crate::{
-    quad_tree::{self, *},
-    SIMULATION_DT,
-};
+use crate::{simulation::quad_tree, SIMULATION_DT};
 
 const NB_BALLS: usize = 440;
 const BALL_RADII: f32 = 3.;
@@ -108,6 +104,7 @@ pub struct GardenLevel {
 
     kill_distance_squared: f32,
     level_parameters: LevelParameters,
+    background: Texture2D,
 }
 
 impl GardenLevel {
@@ -118,6 +115,13 @@ impl GardenLevel {
             level_parameters.play_area_size.x * 4.,
             level_parameters.play_area_size.x * 4.,
         );
+
+        let background = get_radial_gradient_texture(
+            level_parameters.window_size[0] as u32,
+            level_parameters.window_size[1] as u32,
+            colors::BLUE,
+        );
+
         return GardenLevel {
             paused: false,
             balls: Vec::with_capacity(NB_BALLS),
@@ -145,6 +149,7 @@ impl GardenLevel {
             trace_index: 0,
             level_parameters,
             kill_distance_squared: f32::powf(level_parameters.window_size[0] * f32::sqrt(2.), 2.),
+            background,
         };
     }
 
@@ -167,7 +172,6 @@ impl GardenLevel {
 
         if is_key_down(KeyCode::R) {
             self.selected_ball = None;
-            self.paused = true;
             srand(1);
             reset_balls(&mut self.balls, &self.static_bodies);
         }
@@ -359,7 +363,17 @@ impl GardenLevel {
     }
 
     pub fn draw(&self) {
-        clear_background(Color::from_rgba(1, 0, 7, 255));
+        draw_texture_ex(
+            &self.background,
+            0.,
+            0.,
+            colors::WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(screen_width(), screen_height())),
+                ..Default::default()
+            },
+        );
+
         set_camera(&self.main_camera);
 
         self.player.draw();

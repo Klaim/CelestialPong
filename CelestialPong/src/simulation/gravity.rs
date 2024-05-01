@@ -4,7 +4,8 @@ use macroquad::{
     shapes::draw_line,
 };
 
-use crate::{ball::Ball, SIMULATION_DT};
+use crate::simulation::ball::Ball;
+use crate::SIMULATION_DT;
 
 const GRAVITY: f32 = 1.;
 
