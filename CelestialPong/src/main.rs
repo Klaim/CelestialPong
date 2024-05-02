@@ -60,6 +60,7 @@ async fn main() {
         for _frame in 0..frame_per_frame {
             next_level = level.update();
         }
+
         level.draw();
 
         set_default_camera();

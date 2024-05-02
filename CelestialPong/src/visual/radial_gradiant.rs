@@ -44,7 +44,7 @@ highp float random(highp vec2 coords) {
 }
 
 void main() {
-    float d = distance(vec2(.5), uv);
+    float d = length(uv);
     d += mix(-NOISE_GRANULARITY, NOISE_GRANULARITY, random(uv));
     gl_FragColor = color * 1. - d;
 }
@@ -65,7 +65,7 @@ uniform mat4 Projection;
 
 void main() {
     gl_Position = Projection * Model * vec4(position, 1);
-    uv = texcoord;
+    uv = (texcoord - vec2(.5)) * 2.;
     color = color0 / 255.;
 }
 ";

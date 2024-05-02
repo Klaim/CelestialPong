@@ -14,15 +14,15 @@ use crate::{
 };
 use crate::{simulation::quad_tree, SIMULATION_DT};
 
-const NB_BALLS: usize = 440;
-const BALL_RADII: f32 = 3.;
+const NB_BALLS: usize = 300;
+const BALL_RADII: f32 = 6.;
 const BALL_MASS: f32 = 40.;
 
 const BODY_MASS: f32 = 10000000.;
 // const BODY_BOUNCYNESS: f32 = 0.9;
 
 const ORBIT_TRAP: f32 = 10.0;
-const ORBIT_TRAP_SIZE: f32 = BALL_RADII * BALL_RADII;
+const ORBIT_TRAP_SIZE: f32 = 9.;
 
 const MIN_START_ORBIT: f32 = 220.;
 const MAX_START_ORBIT: f32 = 321.;
@@ -98,7 +98,6 @@ pub struct GardenLevel {
     main_camera: Camera2D,
     collided_balls: Vec<usize>,
     balls_marked_for_delete: Vec<usize>,
-    selected_ball: Option<usize>,
     traces: [Vec2; TRACE_SIZE],
     trace_index: usize,
 
@@ -144,11 +143,13 @@ impl GardenLevel {
 
             collided_balls: Vec::with_capacity(NB_BALLS),
             balls_marked_for_delete: Vec::with_capacity(NB_BALLS),
-            selected_ball: None,
             traces: [Vec2::ZERO; TRACE_SIZE],
             trace_index: 0,
             level_parameters,
-            kill_distance_squared: f32::powf(level_parameters.window_size[0] * f32::sqrt(2.), 2.),
+            kill_distance_squared: f32::powf(
+                level_parameters.window_size[0] * f32::sqrt(2.) / 2.,
+                2.,
+            ),
             background,
         };
     }
@@ -171,7 +172,6 @@ impl GardenLevel {
         }
 
         if is_key_down(KeyCode::R) {
-            self.selected_ball = None;
             srand(1);
             reset_balls(&mut self.balls, &self.static_bodies);
         }
@@ -194,10 +194,8 @@ impl GardenLevel {
                 let mut local_force = Vec2::ZERO;
 
                 // Comuting gravity
-                if self.selected_ball == None || self.selected_ball.unwrap() != index {
-                    for body in &self.static_bodies {
-                        local_force = local_force + get_gravity_force(ball, body)
-                    }
+                for body in &self.static_bodies {
+                    local_force = local_force + get_gravity_force(ball, body)
                 }
 
                 // Trapping ball in the nearest body
@@ -302,16 +300,6 @@ impl GardenLevel {
             self.balls_marked_for_delete.sort_unstable();
             for index in self.balls_marked_for_delete.iter().rev() {
                 self.balls.remove(*index);
-                match self.selected_ball {
-                    Some(selected) => {
-                        if index == &selected {
-                            self.selected_ball = None;
-                        } else if index < &selected {
-                            self.selected_ball = Some(selected - 1);
-                        }
-                    }
-                    None => {}
-                }
             }
 
             self.balls_marked_for_delete.clear();
@@ -344,19 +332,6 @@ impl GardenLevel {
             );
 
             self.balls.push(ball);
-        }
-
-        if is_mouse_button_released(MouseButton::Left) {
-            self.selected_ball = None;
-        }
-
-        match self.selected_ball {
-            Some(ball_index) => {
-                let ball = self.balls.get_mut(ball_index).unwrap();
-                let force = damping(ball.position, mouse_pos, dt, 0.05 * dt);
-                ball.set_velocity(force, dt);
-            }
-            _ => {}
         }
 
         return Level::None;
