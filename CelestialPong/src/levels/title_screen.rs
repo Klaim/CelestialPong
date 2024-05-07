@@ -15,7 +15,7 @@ pub struct TitleScreen {
     button_skin: Skin,
 }
 
-impl TitleScreen {
+    impl TitleScreen {
     pub fn new(level_parameters: LevelParameters) -> TitleScreen {
         let button_style = root_ui()
             .style_builder()

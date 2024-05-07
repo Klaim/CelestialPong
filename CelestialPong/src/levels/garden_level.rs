@@ -4,13 +4,13 @@
 use macroquad::{
     color::{self, colors},
     prelude::*,
-    rand::{srand, RandomRange},
+    rand::{srand, RandomRange}, ui::{root_ui, Skin},
 };
 
 use crate::{
     levels::{levels::*, title_screen::*},
     simulation::{ball::*, gravity::*, quad_tree::*},
-    visual::radial_gradiant::get_radial_gradient_texture,
+    visual::{radial_gradiant::get_radial_gradient_texture, ui_textures::get_anti_clockwise_skin},
 };
 use crate::{simulation::quad_tree, SIMULATION_DT};
 
@@ -104,6 +104,7 @@ pub struct GardenLevel {
     kill_distance_squared: f32,
     level_parameters: LevelParameters,
     background: Texture2D,
+    anticlockwise_skin: Skin
 }
 
 impl GardenLevel {
@@ -151,6 +152,7 @@ impl GardenLevel {
                 2.,
             ),
             background,
+            anticlockwise_skin: get_anti_clockwise_skin(300., 300.)
         };
     }
 
@@ -369,5 +371,10 @@ impl GardenLevel {
         // }
 
         set_default_camera();
+
+        root_ui().push_skin(&self.anticlockwise_skin);
+        let control_positions = vec2(self.level_parameters.window_size[0]/2.,200.);
+        root_ui().button(control_positions, "");
+        root_ui().pop_skin();
     }
 }
