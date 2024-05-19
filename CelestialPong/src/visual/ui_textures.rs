@@ -1,19 +1,30 @@
-use macroquad::prelude::*;
 use macroquad::color::colors;
-use macroquad::ui::{hash, root_ui, widgets, Skin};
+use macroquad::prelude::*;
+use macroquad::ui::{root_ui, Skin};
 
-pub fn get_circe_arrow(width : u32, height : u32, color: Color) -> Texture2D {
-    let render_target = render_target(width, height);
-    render_target.texture.set_filter(FilterMode::Nearest);
-
+fn get_circle_arrow_material() -> Material {
     let material = load_material(
         ShaderSource::Glsl {
             vertex: &DEFAULT_VERTEX_SHADER,
             fragment: &ARROW_FRAGMENT_SHADER,
         },
-        Default::default(),
+        MaterialParams {
+            uniforms: vec![("Flip".to_string(), UniformType::Float2)],
+            ..Default::default()
+        },
     )
     .unwrap();
+    return material;
+}
+
+fn render_material_to_texture(
+    material: Material,
+    width: u32,
+    height: u32,
+    color: Color,
+) -> Texture2D {
+    let render_target = render_target(width, height);
+    render_target.texture.set_filter(FilterMode::Nearest);
 
     set_camera(&Camera2D {
         zoom: vec2(1., 1.),
@@ -21,6 +32,7 @@ pub fn get_circe_arrow(width : u32, height : u32, color: Color) -> Texture2D {
         render_target: Some(render_target.clone()),
         ..Default::default()
     });
+
     {
         gl_use_material(&material);
         {
@@ -33,31 +45,94 @@ pub fn get_circe_arrow(width : u32, height : u32, color: Color) -> Texture2D {
     return render_target.texture;
 }
 
-pub fn get_anti_clockwise_skin(width: f32, height: f32) -> Skin {
+pub fn get_circe_arrow(width: u32, height: u32, color: Color) -> Texture2D {
+    let render_target = render_target(width, height);
+    render_target.texture.set_filter(FilterMode::Nearest);
 
-    let texture = get_circe_arrow(width as u32, height as u32, colors::WHITE).get_texture_data();
-    let hovered = get_circe_arrow(width as u32, height as u32, colors::LIGHTGRAY).get_texture_data();
-    let clicked = get_circe_arrow(width as u32, height as u32, colors::BEIGE).get_texture_data();
+    let material = get_circle_arrow_material();
+    material.set_uniform("Flip", Vec2::from((1., 1.)));
 
-    let arrow_button_style = root_ui().style_builder()
-        .background(texture)
+    return render_material_to_texture(material, width, height, color);
+}
+
+pub fn get_circe_arrow_flipped(width: u32, height: u32, color: Color) -> Texture2D {
+    let render_target = render_target(width, height);
+    render_target.texture.set_filter(FilterMode::Nearest);
+
+    let material = get_circle_arrow_material();
+    material.set_uniform("Flip", Vec2::from((-1., 1.)));
+
+    return render_material_to_texture(material, width, height, color);
+}
+
+fn get_skin(width: f32, height: f32, base: Image, hovered: Image, clicked: Image) -> Skin {
+    let style = root_ui()
+        .style_builder()
+        .background(base)
         .background_hovered(hovered)
         .background_clicked(clicked)
-        .margin(RectOffset{top:height / 2.,left:width / 2.,bottom:height / 2.,right:width / 2.})
+        .margin(RectOffset {
+            top: height / 2.,
+            left: width / 2.,
+            bottom: height / 2.,
+            right: width / 2.,
+        })
         .font_size(0)
         .build();
 
-    Skin {
-        button_style: arrow_button_style,
+    return Skin {
+        button_style: style,
         ..root_ui().default_skin()
-    }
+    };
 }
+
+pub fn get_anti_clockwise_skin(width: f32, height: f32) -> Skin {
+    let texture = get_circe_arrow(width as u32, height as u32, colors::WHITE).get_texture_data();
+    let hovered =
+        get_circe_arrow(width as u32, height as u32, colors::LIGHTGRAY).get_texture_data();
+    let clicked = get_circe_arrow(width as u32, height as u32, colors::BEIGE).get_texture_data();
+
+    return get_skin(width, height, texture, hovered, clicked);
+}
+
+pub fn get_clockwise_skin(width: f32, height: f32) -> Skin {
+    let texture =
+        get_circe_arrow_flipped(width as u32, height as u32, colors::WHITE).get_texture_data();
+    let hovered =
+        get_circe_arrow_flipped(width as u32, height as u32, colors::LIGHTGRAY).get_texture_data();
+    let clicked =
+        get_circe_arrow_flipped(width as u32, height as u32, colors::BEIGE).get_texture_data();
+
+    return get_skin(width, height, texture, hovered, clicked);
+}
+
+const DEFAULT_VERTEX_SHADER: &'static str = "#version 100
+precision lowp float;
+
+attribute vec3 position;
+attribute vec2 texcoord;
+attribute vec4 color0;
+
+varying vec2 uv;
+varying lowp vec4 color;
+
+uniform mat4 Model;
+uniform mat4 Projection;
+
+
+void main() {
+    gl_Position = Projection * Model * vec4(position, 1);
+    uv = (texcoord - vec2(.5)) * 2.;
+    color = color0 / 255.;
+}
+";
 
 const ARROW_FRAGMENT_SHADER: &'static str = "#version 100
 precision lowp float;
 
 varying vec2 uv;
 varying vec4 color;
+uniform vec2 Flip;
 
 const float TAU = 6.28318;
 const highp float NOISE_GRANULARITY = 4./255.;
@@ -71,7 +146,7 @@ float udSegment( in vec2 p, in vec2 a, in vec2 b )
 {
     vec2 ba = b-a;
     vec2 pa = p-a;
-    float h =clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
+    float h = clamp( dot(pa,ba)/dot(ba,ba), 0.0, 1.0 );
     return length(pa-h*ba);
 }
 
@@ -100,29 +175,10 @@ float sdf(vec2 uv, float radius, float arrowRadius)
 }
 
 void main() {
-    float d = sdf(uv, .05, .75);
+    vec2 transformed = uv;
+    transformed = transformed * Flip;
+    float d = sdf((transformed + vec2(.5, .5))/1.5, .05, .75);
     d = smoothstep(-.01, .01, -d);
-    //d += mix(-NOISE_GRANULARITY, NOISE_GRANULARITY, random(uv));
-    gl_FragColor = color * (d + .1);
-}
-";
-
-const DEFAULT_VERTEX_SHADER: &'static str = "#version 100
-precision lowp float;
-
-attribute vec3 position;
-attribute vec2 texcoord;
-attribute vec4 color0;
-
-varying vec2 uv;
-varying lowp vec4 color;
-
-uniform mat4 Model;
-uniform mat4 Projection;
-
-void main() {
-    gl_Position = Projection * Model * vec4(position, 1);
-    uv = (texcoord - vec2(.5)) * 2.;
-    color = color0 / 255.;
+    gl_FragColor = color * (d + .51);
 }
 ";

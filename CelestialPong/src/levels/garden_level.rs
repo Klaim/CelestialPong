@@ -4,14 +4,19 @@
 use macroquad::{
     color::{self, colors},
     prelude::*,
-    rand::{srand, RandomRange}, ui::{root_ui, Skin},
+    rand::{srand, RandomRange},
+    ui::{root_ui, widgets::Button, Skin},
 };
 
 use crate::{
     levels::{levels::*, title_screen::*},
     simulation::{ball::*, gravity::*, quad_tree::*},
-    visual::{radial_gradiant::get_radial_gradient_texture, ui_textures::get_anti_clockwise_skin},
+    visual::{
+        radial_gradiant::get_radial_gradient_texture,
+        ui_textures::{get_anti_clockwise_skin, get_clockwise_skin},
+    },
 };
+
 use crate::{simulation::quad_tree, SIMULATION_DT};
 
 const NB_BALLS: usize = 300;
@@ -32,9 +37,20 @@ const TRACE_SIZE: usize = 1000;
 struct Player {
     position: Vec2,
     orientation: f32,
+    orbiting_center: Vec2,
+    orbiting_radius: f32,
+    azimut: f32,
+    azimut_speed: f32,
 }
 
 impl Player {
+    pub fn update(&mut self, dt: f32) {
+        self.azimut = self.azimut + self.azimut_speed * dt;
+        self.azimut_speed = self.azimut_speed * 0.9;
+        self.position = self.orbiting_center
+            + Vec2::from_angle(self.azimut).rotate(Vec2::X) * self.orbiting_radius;
+    }
+
     pub fn draw(&self) {
         draw_poly(
             self.position.x,
@@ -104,7 +120,14 @@ pub struct GardenLevel {
     kill_distance_squared: f32,
     level_parameters: LevelParameters,
     background: Texture2D,
-    anticlockwise_skin: Skin
+    anticlockwise_skin: Skin,
+    clockwise_skin: Skin,
+}
+
+enum UIActions {
+    Clockwise,
+    Anticlockwise,
+    None,
 }
 
 impl GardenLevel {
@@ -140,6 +163,10 @@ impl GardenLevel {
             player: Player {
                 position: Vec2::new(300., 300.),
                 orientation: 0.,
+                orbiting_center: vec2(0., 0.),
+                orbiting_radius: 400.,
+                azimut: 0.,
+                azimut_speed: 0.,
             },
 
             collided_balls: Vec::with_capacity(NB_BALLS),
@@ -152,7 +179,8 @@ impl GardenLevel {
                 2.,
             ),
             background,
-            anticlockwise_skin: get_anti_clockwise_skin(300., 300.)
+            anticlockwise_skin: get_anti_clockwise_skin(100., 100.),
+            clockwise_skin: get_clockwise_skin(100., 100.),
         };
     }
 
@@ -182,6 +210,8 @@ impl GardenLevel {
             let title = TitleScreen::new(self.level_parameters);
             return Level::TitleScreen(title);
         }
+
+        let ui_action = self.update_ui();
 
         let dt = SIMULATION_DT;
 
@@ -305,6 +335,8 @@ impl GardenLevel {
             }
 
             self.balls_marked_for_delete.clear();
+
+            self.player.update(dt);
         }
 
         let (spx, spy) = mouse_position();
@@ -323,17 +355,27 @@ impl GardenLevel {
             &mut near_balls,
         );
 
-        if is_mouse_button_pressed(MouseButton::Left) {
-            let ball_vel = (mouse_pos - self.player.position).normalize() * 7.;
-            let ball = Ball::new(
-                self.player.position,
-                ball_vel,
-                BALL_RADII * 2.,
-                BALL_MASS * 2.,
-                colors::BLUE,
-            );
+        match ui_action {
+            UIActions::None => {
+                if is_mouse_button_pressed(MouseButton::Left) {
+                    let ball_vel = (mouse_pos - self.player.position).normalize() * 7.;
+                    let ball = Ball::new(
+                        self.player.position,
+                        ball_vel,
+                        BALL_RADII * 2.,
+                        BALL_MASS * 2.,
+                        colors::BLUE,
+                    );
 
-            self.balls.push(ball);
+                    self.balls.push(ball);
+                }
+            }
+            UIActions::Anticlockwise => {
+                self.player.azimut_speed = -1.;
+            }
+            UIActions::Clockwise => {
+                self.player.azimut_speed = 1.;
+            }
         }
 
         return Level::None;
@@ -371,10 +413,39 @@ impl GardenLevel {
         // }
 
         set_default_camera();
+    }
 
+    fn update_ui(&self) -> UIActions {
         root_ui().push_skin(&self.anticlockwise_skin);
-        let control_positions = vec2(self.level_parameters.window_size[0]/2.,200.);
-        root_ui().button(control_positions, "");
+        let anticlockwise = root_ui().button(
+            vec2(
+                self.level_parameters.window_size[0] / 2.,
+                self.level_parameters.window_size[1] - 110.,
+            ),
+            "",
+        );
         root_ui().pop_skin();
+
+        root_ui().push_skin(&self.clockwise_skin);
+        let grp = root_ui().group(id, size, f);
+        let btn = Button::new("").position(vec2(0., 0.));
+        let clockwise = root_ui().button(
+            vec2(
+                self.level_parameters.window_size[0] / 2. - 100.,
+                self.level_parameters.window_size[1] - 110.,
+            ),
+            "",
+        );
+        root_ui().pop_skin();
+
+        if anticlockwise {
+            return UIActions::Anticlockwise;
+        }
+
+        if clockwise {
+            return UIActions::Clockwise;
+        }
+
+        return UIActions::None;
     }
 }
