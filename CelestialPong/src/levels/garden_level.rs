@@ -5,12 +5,16 @@ use macroquad::{
     color::{self, colors},
     prelude::*,
     rand::{srand, RandomRange},
-    ui::{root_ui, widgets::Button, Skin},
+    ui::{root_ui, Skin},
 };
 
 use crate::{
     levels::{levels::*, title_screen::*},
-    simulation::{ball::*, gravity::*, quad_tree::*},
+    simulation::{
+        ball::*,
+        gravity::*,
+        quad_tree::{Rect, *},
+    },
     visual::{
         radial_gradiant::get_radial_gradient_texture,
         ui_textures::{get_anti_clockwise_skin, get_clockwise_skin},
@@ -120,7 +124,10 @@ pub struct GardenLevel {
     kill_distance_squared: f32,
     level_parameters: LevelParameters,
     background: Texture2D,
+
+    anticlockwise_btn_rect: Rect,
     anticlockwise_skin: Skin,
+    clockwise_btn_rect: Rect,
     clockwise_skin: Skin,
 }
 
@@ -143,6 +150,20 @@ impl GardenLevel {
             level_parameters.window_size[0] as u32,
             level_parameters.window_size[1] as u32,
             colors::BLUE,
+        );
+
+        let anticlockwise_btn_rect = Rect::new(
+            level_parameters.window_size[0] / 2. + 50.,
+            level_parameters.window_size[1] - 60.,
+            100.,
+            100.,
+        );
+
+        let clockwise_btn_rect = Rect::new(
+            level_parameters.window_size[0] / 2. - 50.,
+            level_parameters.window_size[1] - 60.,
+            100.,
+            100.,
         );
 
         return GardenLevel {
@@ -179,8 +200,16 @@ impl GardenLevel {
                 2.,
             ),
             background,
-            anticlockwise_skin: get_anti_clockwise_skin(100., 100.),
-            clockwise_skin: get_clockwise_skin(100., 100.),
+            anticlockwise_btn_rect,
+            anticlockwise_skin: get_anti_clockwise_skin(
+                anticlockwise_btn_rect.half_width * 2.,
+                anticlockwise_btn_rect.half_height * 2.,
+            ),
+            clockwise_btn_rect,
+            clockwise_skin: get_clockwise_skin(
+                clockwise_btn_rect.half_width * 2.,
+                clockwise_btn_rect.half_height * 2.,
+            ),
         };
     }
 
@@ -417,33 +446,31 @@ impl GardenLevel {
 
     fn update_ui(&self) -> UIActions {
         root_ui().push_skin(&self.anticlockwise_skin);
-        let anticlockwise = root_ui().button(
+        root_ui().button(
             vec2(
-                self.level_parameters.window_size[0] / 2.,
-                self.level_parameters.window_size[1] - 110.,
+                self.anticlockwise_btn_rect.left,
+                self.anticlockwise_btn_rect.up,
             ),
             "",
         );
         root_ui().pop_skin();
 
         root_ui().push_skin(&self.clockwise_skin);
-        let grp = root_ui().group(id, size, f);
-        let btn = Button::new("").position(vec2(0., 0.));
-        let clockwise = root_ui().button(
-            vec2(
-                self.level_parameters.window_size[0] / 2. - 100.,
-                self.level_parameters.window_size[1] - 110.,
-            ),
+        root_ui().button(
+            vec2(self.clockwise_btn_rect.left, self.anticlockwise_btn_rect.up),
             "",
         );
         root_ui().pop_skin();
 
-        if anticlockwise {
-            return UIActions::Anticlockwise;
-        }
+        let mouse_pos = Vec2::from(mouse_position());
+        if is_mouse_button_down(MouseButton::Left) {
+            if self.anticlockwise_btn_rect.contains(mouse_pos) {
+                return UIActions::Anticlockwise;
+            }
 
-        if clockwise {
-            return UIActions::Clockwise;
+            if self.clockwise_btn_rect.contains(mouse_pos) {
+                return UIActions::Clockwise;
+            }
         }
 
         return UIActions::None;
