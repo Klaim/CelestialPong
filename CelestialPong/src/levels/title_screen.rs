@@ -15,7 +15,7 @@ pub struct TitleScreen {
     button_skin: Skin,
 }
 
-    impl TitleScreen {
+impl TitleScreen {
     pub fn new(level_parameters: LevelParameters) -> TitleScreen {
         let button_style = root_ui()
             .style_builder()
@@ -42,8 +42,14 @@ pub struct TitleScreen {
 
     pub fn update(&self) -> Level {
         root_ui().push_skin(&self.button_skin.clone());
-        let sky_level = root_ui().button(vec2(250., 250.), "Sky garden");
-        let sandbox_level = root_ui().button(vec2(500., 250.), "Sandbox");
+        let sky_level = root_ui().button(vec2(400., 350.), "Start prunning");
+        let sandbox_level = root_ui().button(
+            vec2(
+                self.level_parameters.window_size[0] - 100.,
+                self.level_parameters.window_size[1] - 100.,
+            ),
+            "Sandbox",
+        );
         root_ui().pop_skin();
 
         if sky_level {
@@ -56,17 +62,35 @@ pub struct TitleScreen {
     }
 
     pub fn draw(&self) {
-        let title_label = "Celestial Garden";
-        let font_size = 30.;
-        let width = title_label.len() as f32 * font_size;
+        let font_size = 64.;
         draw_text_ex(
             "Celestial Garden",
-            (&self.level_parameters.window_size[0] - width) / 2.,
+            250.,
             200.,
             TextParams {
                 font_size: font_size as u16,
                 ..Default::default()
             },
-        )
+        );
+
+        draw_text_ex(
+            "Remove all the bad seed hanging around the planet",
+            230.,
+            260.,
+            TextParams {
+                font_size: 24,
+                ..Default::default()
+            },
+        );
+
+        draw_text_ex(
+            "the more carefull you are, the higher your score!",
+            280.,
+            280.,
+            TextParams {
+                font_size: 24,
+                ..Default::default()
+            },
+        );
     }
 }

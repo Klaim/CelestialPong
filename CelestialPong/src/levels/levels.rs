@@ -1,11 +1,12 @@
 use macroquad::math::Vec2;
 
-use crate::levels::{garden_level::*, sandbox_level::*, title_screen::*};
+use crate::levels::{game_over::*, garden_level::*, sandbox_level::*, title_screen::*};
 
 pub enum Level {
     TitleScreen(TitleScreen),
     SandboxLevel(SandboxLevel),
     GardenLevel(GardenLevel),
+    GameOver(GameOver),
     None,
 }
 
@@ -27,6 +28,7 @@ impl Level {
             Level::TitleScreen(title) => title.update(),
             Level::SandboxLevel(level) => level.update(),
             Level::GardenLevel(level) => level.update(),
+            Level::GameOver(level) => level.update(),
             _ => Level::None,
         }
     }
@@ -40,6 +42,9 @@ impl Level {
                 level.draw();
             }
             Level::GardenLevel(level) => {
+                level.draw();
+            }
+            Level::GameOver(level) => {
                 level.draw();
             }
             _ => {}

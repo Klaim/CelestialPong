@@ -8,8 +8,6 @@ mod visual;
 use levels::levels::{Level, LevelParameters};
 use levels::title_screen::TitleScreen;
 
-use macroquad::color::colors;
-use macroquad::ui::{hash, root_ui, widgets, Skin};
 use macroquad::{prelude::*, window};
 
 const WINDOW_SIZE: [f32; 2] = [1000., 1000.];

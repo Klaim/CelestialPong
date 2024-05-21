@@ -23,6 +23,8 @@ use crate::{
 
 use crate::{simulation::quad_tree, SIMULATION_DT};
 
+use super::game_over::GameOver;
+
 const NB_BALLS: usize = 300;
 const BALL_RADII: f32 = 6.;
 const BALL_MASS: f32 = 40.;
@@ -37,6 +39,13 @@ const MIN_START_ORBIT: f32 = 220.;
 const MAX_START_ORBIT: f32 = 321.;
 
 const TRACE_SIZE: usize = 1000;
+
+const BAD_BALL_COLOR: Color = Color {
+    r: 0.9,
+    g: 0.1,
+    b: 0.1,
+    a: 1.,
+};
 
 struct Player {
     position: Vec2,
@@ -83,12 +92,7 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
             random_orbital_pos(static_bodies[0].position, MIN_START_ORBIT, MAX_START_ORBIT);
 
         let color = match index < NB_BALLS / 10 {
-            true => Color {
-                r: 0.9,
-                g: 0.1,
-                b: 0.1,
-                a: 1.,
-            },
+            true => BAD_BALL_COLOR,
             false => Color {
                 r: 0.75,
                 g: 0.75,
@@ -405,6 +409,10 @@ impl GardenLevel {
             UIActions::Clockwise => {
                 self.player.azimut_speed = 1.;
             }
+        }
+
+        if !self.balls.iter().any(|ball| ball.color == BAD_BALL_COLOR) {
+            return GameOver::game_over(self.balls.len() as i32, self.level_parameters);
         }
 
         return Level::None;
