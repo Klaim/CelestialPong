@@ -3,6 +3,7 @@ use macroquad::{
     math::{vec2, RectOffset},
     text::{draw_text_ex, TextParams},
     ui::{root_ui, Skin},
+    window,
 };
 
 use crate::levels::levels::*;
@@ -42,12 +43,15 @@ impl TitleScreen {
 
     pub fn update(&self) -> Level {
         root_ui().push_skin(&self.button_skin.clone());
-        let sky_level = root_ui().button(vec2(400., 350.), "Start prunning");
-        let sandbox_level = root_ui().button(
+        let sky_level = root_ui().button(
             vec2(
-                self.level_parameters.window_size[0] - 100.,
-                self.level_parameters.window_size[1] - 100.,
+                window::screen_width() / 2. - 20.,
+                window::screen_height() / 2.,
             ),
+            "Start",
+        );
+        let sandbox_level = root_ui().button(
+            vec2(window::screen_width() - 100., window::screen_height() - 60.),
             "Sandbox",
         );
         root_ui().pop_skin();
@@ -63,10 +67,11 @@ impl TitleScreen {
 
     pub fn draw(&self) {
         let font_size = 64.;
+        let center = vec2(window::screen_width(), window::screen_height()) / 2.;
         draw_text_ex(
             "Celestial Garden",
-            250.,
-            200.,
+            center.x - 250.,
+            center.y - 200.,
             TextParams {
                 font_size: font_size as u16,
                 ..Default::default()
@@ -75,8 +80,8 @@ impl TitleScreen {
 
         draw_text_ex(
             "Remove all the bad seed hanging around the planet",
-            230.,
-            260.,
+            center.x - 240.,
+            center.y - 100.,
             TextParams {
                 font_size: 24,
                 ..Default::default()
@@ -85,10 +90,19 @@ impl TitleScreen {
 
         draw_text_ex(
             "the more carefull you are, the higher your score!",
-            280.,
-            280.,
+            center.x - 200.,
+            center.y - 80.,
             TextParams {
                 font_size: 24,
+                ..Default::default()
+            },
+        );
+
+        draw_text_ex(
+            "By AntonMakesGames",
+            10.,
+            center.y * 2. - 5.,
+            TextParams {
                 ..Default::default()
             },
         );

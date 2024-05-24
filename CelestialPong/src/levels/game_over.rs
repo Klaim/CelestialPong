@@ -1,6 +1,10 @@
-use macroquad::{color::colors, text::draw_text};
+use macroquad::{
+    color::colors, input::is_mouse_button_pressed, math::vec2, text::draw_text, window,
+};
 
 use crate::levels::levels::*;
+
+use super::title_screen::TitleScreen;
 
 pub struct GameOver {
     level_parameters: LevelParameters,
@@ -16,15 +20,20 @@ impl GameOver {
     }
 
     pub fn update(&mut self) -> Level {
+        if is_mouse_button_pressed(window::miniquad::MouseButton::Left) {
+            return Level::TitleScreen(TitleScreen::new(self.level_parameters));
+        }
+
         Level::None
     }
 
     pub fn draw(&self) {
         let font_size = 28.;
+        let center = vec2(window::screen_width(), window::screen_height()) / 2.;
         draw_text(
             "Congratulation!",
-            self.level_parameters.window_size[0] / 2. - 64.,
-            self.level_parameters.window_size[1] / 2. - font_size * 2.,
+            center.x - 64.,
+            center.y - font_size * 2.,
             font_size + 10.,
             colors::GOLD,
         );
@@ -33,8 +42,8 @@ impl GameOver {
         let width = label.len() as f32 * font_size;
         draw_text(
             &label,
-            self.level_parameters.window_size[0] / 2. - width / 4.,
-            self.level_parameters.window_size[1] / 2.,
+            center.x - width / 4.,
+            center.y,
             font_size,
             colors::GOLD,
         );

@@ -6,6 +6,7 @@ use macroquad::{
     prelude::*,
     rand::{srand, RandomRange},
     ui::{root_ui, Skin},
+    window,
 };
 
 use crate::{
@@ -26,7 +27,7 @@ use crate::{simulation::quad_tree, SIMULATION_DT};
 use super::game_over::GameOver;
 
 const NB_BALLS: usize = 300;
-const BALL_RADII: f32 = 6.;
+const BALL_RADII: f32 = 4.;
 const BALL_MASS: f32 = 40.;
 
 const BODY_MASS: f32 = 10000000.;
@@ -59,7 +60,6 @@ struct Player {
 impl Player {
     pub fn update(&mut self, dt: f32) {
         self.azimut = self.azimut + self.azimut_speed * dt;
-        self.azimut_speed = self.azimut_speed * 0.9;
         self.position = self.orbiting_center
             + Vec2::from_angle(self.azimut).rotate(Vec2::X) * self.orbiting_radius;
     }
@@ -156,19 +156,12 @@ impl GardenLevel {
             colors::BLUE,
         );
 
-        let anticlockwise_btn_rect = Rect::new(
-            level_parameters.window_size[0] / 2. + 50.,
-            level_parameters.window_size[1] - 60.,
-            100.,
-            100.,
-        );
+        let center_x = window::screen_width() / 2.;
+        let bottom = window::screen_height() - 60.;
+        let btn_size = 50.;
+        let anticlockwise_btn_rect = Rect::new(center_x + 55., bottom, btn_size, btn_size);
 
-        let clockwise_btn_rect = Rect::new(
-            level_parameters.window_size[0] / 2. - 50.,
-            level_parameters.window_size[1] - 60.,
-            100.,
-            100.,
-        );
+        let clockwise_btn_rect = Rect::new(center_x - 55., bottom, btn_size, btn_size);
 
         return GardenLevel {
             paused: false,
@@ -191,7 +184,7 @@ impl GardenLevel {
                 orbiting_center: vec2(0., 0.),
                 orbiting_radius: 400.,
                 azimut: 0.,
-                azimut_speed: 0.,
+                azimut_speed: -0.15,
             },
 
             collided_balls: Vec::with_capacity(NB_BALLS),
@@ -453,33 +446,33 @@ impl GardenLevel {
     }
 
     fn update_ui(&self) -> UIActions {
-        root_ui().push_skin(&self.anticlockwise_skin);
-        root_ui().button(
-            vec2(
-                self.anticlockwise_btn_rect.left,
-                self.anticlockwise_btn_rect.up,
-            ),
-            "",
-        );
-        root_ui().pop_skin();
+        // root_ui().push_skin(&self.anticlockwise_skin);
+        // root_ui().button(
+        //     vec2(
+        //         self.anticlockwise_btn_rect.left,
+        //         self.anticlockwise_btn_rect.up,
+        //     ),
+        //     "",
+        // );
+        // root_ui().pop_skin();
 
-        root_ui().push_skin(&self.clockwise_skin);
-        root_ui().button(
-            vec2(self.clockwise_btn_rect.left, self.anticlockwise_btn_rect.up),
-            "",
-        );
-        root_ui().pop_skin();
+        // root_ui().push_skin(&self.clockwise_skin);
+        // root_ui().button(
+        //     vec2(self.clockwise_btn_rect.left, self.anticlockwise_btn_rect.up),
+        //     "",
+        // );
+        // root_ui().pop_skin();
 
-        let mouse_pos = Vec2::from(mouse_position());
-        if is_mouse_button_down(MouseButton::Left) {
-            if self.anticlockwise_btn_rect.contains(mouse_pos) {
-                return UIActions::Anticlockwise;
-            }
+        // let mouse_pos = Vec2::from(mouse_position());
+        // if is_mouse_button_down(MouseButton::Left) {
+        //     if self.anticlockwise_btn_rect.contains(mouse_pos) {
+        //         return UIActions::Anticlockwise;
+        //     }
 
-            if self.clockwise_btn_rect.contains(mouse_pos) {
-                return UIActions::Clockwise;
-            }
-        }
+        //     if self.clockwise_btn_rect.contains(mouse_pos) {
+        //         return UIActions::Clockwise;
+        //     }
+        // }
 
         return UIActions::None;
     }

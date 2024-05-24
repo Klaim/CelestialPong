@@ -18,8 +18,8 @@ const SIMULATION_DT: f32 = 1. / 240.;
 fn window_config() -> Conf {
     Conf {
         window_title: "Celestial pong".to_owned(),
-        window_width: WINDOW_SIZE[0] as i32,
-        window_height: WINDOW_SIZE[1] as i32,
+        // window_width: WINDOW_SIZE[0] as i32,
+        // window_height: WINDOW_SIZE[1] as i32,
         ..Default::default()
     }
 }
@@ -40,9 +40,9 @@ async fn main() {
     let mut fps_index: usize = 0;
 
     loop {
-        if is_key_pressed(KeyCode::Escape) {
-            return;
-        }
+        // if is_key_pressed(KeyCode::Escape) {
+        //     return;
+        // }
 
         if is_key_pressed(KeyCode::Up) {
             frame_per_frame = frame_per_frame + 1;
