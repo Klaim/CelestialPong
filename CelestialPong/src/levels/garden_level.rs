@@ -91,7 +91,9 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
         let position =
             random_orbital_pos(static_bodies[0].position, MIN_START_ORBIT, MAX_START_ORBIT);
 
-        let color = match index < NB_BALLS / 10 {
+        let bad_seed = index < NB_BALLS / 10;
+
+        let color = match bad_seed {
             true => BAD_BALL_COLOR,
             false => Color {
                 r: 0.75,
@@ -101,7 +103,12 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
             },
         };
 
-        let mut ball = Ball::new(position, Vec2::ZERO, BALL_RADII, BALL_MASS, color);
+        let radius = match bad_seed {
+            true => BALL_RADII * 1.4,
+            false => BALL_RADII,
+        };
+
+        let mut ball = Ball::new(position, Vec2::ZERO, radius, BALL_MASS, color);
 
         let ball_speed = get_orbital_velocity(&ball, &static_bodies[0]);
 
