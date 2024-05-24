@@ -1,8 +1,8 @@
 use macroquad::prelude::*;
 
-use crate::quad_tree::{self, Rect};
+use crate::simulation::quad_tree;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Ball {
     pub position: Vec2,
     pub prev_position: Vec2,
@@ -10,18 +10,10 @@ pub struct Ball {
     pub radius: f32,
     pub mass: f32,
     pub color: Color,
-    playing_field: Rect,
 }
 
 impl Ball {
-    pub fn new(
-        position: Vec2,
-        velocity: Vec2,
-        radius: f32,
-        mass: f32,
-        color: Color,
-        playing_field: Rect,
-    ) -> Ball {
+    pub fn new(position: Vec2, velocity: Vec2, radius: f32, mass: f32, color: Color) -> Ball {
         Ball {
             position,
             prev_position: position - velocity,
@@ -29,7 +21,6 @@ impl Ball {
             radius,
             mass,
             color,
-            playing_field,
         }
     }
 
@@ -44,21 +35,10 @@ impl Ball {
         draw_circle(pos.x, pos.y, self.radius, self.color);
     }
 
+    #[allow(dead_code)]
     pub fn update(&mut self, dt: f32, acc: Vec2) {
         self.velocity += acc * dt;
         let pos = self.position;
-
-        if pos.x < self.playing_field.left && self.velocity.x < 0.
-            || pos.x > self.playing_field.right && self.velocity.x > 0.
-        {
-            self.velocity.x *= -1.;
-        }
-
-        if pos.y < self.playing_field.up && self.velocity.y < 0.
-            || pos.y > self.playing_field.down && self.velocity.y > 0.
-        {
-            self.velocity.y *= -1.;
-        }
 
         self.prev_position = self.position;
         self.position = pos + self.velocity * dt;
@@ -84,7 +64,7 @@ impl Ball {
     // Based on https://www.vobarian.com/collisions/2dcollisions2.pdf
     // The individual steps from the document are commented
     pub fn collide(&mut self, other: &mut Ball, dt: f32) {
-        const HEAT_DISIPATION: f32 = 0.999;
+        const HEAT_DISIPATION: f32 = 1.0;
         let pos_diff = self.position - other.position;
 
         // 1
@@ -93,15 +73,17 @@ impl Ball {
 
         // 3
         let v1n = self.velocity.dot(unit_normal);
-        let v1t = self.velocity.dot(unit_tangent) * HEAT_DISIPATION;
+        let v1t = self.velocity.dot(unit_tangent);
         let v2n = other.velocity.dot(unit_normal);
-        let v2t = other.velocity.dot(unit_tangent) * HEAT_DISIPATION;
+        let v2t = other.velocity.dot(unit_tangent);
 
         // 5
-        let new_v1n =
-            (v1n * (self.mass - other.mass) + 2. * other.mass * v2n) / (self.mass + other.mass);
-        let new_v2n =
-            (v2n * (other.mass - self.mass) + 2. * self.mass * v1n) / (self.mass + other.mass);
+        let new_v1n = (v1n * (self.mass - other.mass) + 2. * other.mass * v2n)
+            / (self.mass + other.mass)
+            * HEAT_DISIPATION;
+        let new_v2n = (v2n * (other.mass - self.mass) + 2. * self.mass * v1n)
+            / (self.mass + other.mass)
+            * HEAT_DISIPATION;
 
         // 6
         let final_v1n = new_v1n * unit_normal;
