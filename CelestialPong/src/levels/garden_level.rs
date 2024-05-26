@@ -5,8 +5,6 @@ use macroquad::{
     color::{self, colors},
     prelude::*,
     rand::{srand, RandomRange},
-    ui::{root_ui, Skin},
-    window,
 };
 
 use crate::{
@@ -14,12 +12,9 @@ use crate::{
     simulation::{
         ball::*,
         gravity::*,
-        quad_tree::{Rect, *},
+        quad_tree::{ *},
     },
-    visual::{
-        radial_gradiant::get_radial_gradient_texture,
-        ui_textures::{get_anti_clockwise_skin, get_clockwise_skin},
-    },
+    visual::radial_gradiant::get_radial_gradient_texture,
 };
 
 use crate::{simulation::quad_tree, SIMULATION_DT};
@@ -91,7 +86,7 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
         let position =
             random_orbital_pos(static_bodies[0].position, MIN_START_ORBIT, MAX_START_ORBIT);
 
-        let bad_seed = index < NB_BALLS / 10;
+        let bad_seed = index < 20;
 
         let color = match bad_seed {
             true => BAD_BALL_COLOR,
@@ -135,17 +130,6 @@ pub struct GardenLevel {
     kill_distance_squared: f32,
     level_parameters: LevelParameters,
     background: Texture2D,
-
-    anticlockwise_btn_rect: Rect,
-    anticlockwise_skin: Skin,
-    clockwise_btn_rect: Rect,
-    clockwise_skin: Skin,
-}
-
-enum UIActions {
-    Clockwise,
-    Anticlockwise,
-    None,
 }
 
 impl GardenLevel {
@@ -162,13 +146,6 @@ impl GardenLevel {
             level_parameters.window_size[1] as u32,
             colors::BLUE,
         );
-
-        let center_x = window::screen_width() / 2.;
-        let bottom = window::screen_height() - 60.;
-        let btn_size = 50.;
-        let anticlockwise_btn_rect = Rect::new(center_x + 55., bottom, btn_size, btn_size);
-
-        let clockwise_btn_rect = Rect::new(center_x - 55., bottom, btn_size, btn_size);
 
         return GardenLevel {
             paused: false,
@@ -204,16 +181,6 @@ impl GardenLevel {
                 2.,
             ),
             background,
-            anticlockwise_btn_rect,
-            anticlockwise_skin: get_anti_clockwise_skin(
-                anticlockwise_btn_rect.half_width * 2.,
-                anticlockwise_btn_rect.half_height * 2.,
-            ),
-            clockwise_btn_rect,
-            clockwise_skin: get_clockwise_skin(
-                clockwise_btn_rect.half_width * 2.,
-                clockwise_btn_rect.half_height * 2.,
-            ),
         };
     }
 
@@ -243,8 +210,6 @@ impl GardenLevel {
             let title = TitleScreen::new(self.level_parameters);
             return Level::TitleScreen(title);
         }
-
-        let ui_action = self.update_ui();
 
         let dt = SIMULATION_DT;
 
@@ -296,6 +261,13 @@ impl GardenLevel {
                 if ball.position.length_squared() > self.kill_distance_squared {
                     self.balls_marked_for_delete.push(index);
                 }
+                else if ball.color == BAD_BALL_COLOR {
+                    if ball.position.x.abs() > self.level_parameters.window_size[0] / 2. ||
+                        ball.position.y.abs() > self.level_parameters.window_size[1] / 2. {
+                        println!("supressing {} ball", index);    
+                        self.balls_marked_for_delete.push(index);
+                    }
+                }
             }
 
             // Colliding balls
@@ -340,20 +312,6 @@ impl GardenLevel {
                 for near in near_objects {
                     let ball = self.balls.get_mut(near.payload).unwrap();
                     if body.check_collision(&ball) {
-                        // BOUNCE
-                        // let delta = ball.position - body.position;
-                        // if delta.dot(ball.velocity) < 0.
-                        //     && ball.velocity.length_squared() > 0.001
-                        // {
-                        //     let delta = delta.normalize();
-                        //     ball.position = body.position + delta * (body.radius + ball.radius);
-                        //     ball.set_velocity(
-                        //         (ball.velocity - 2. * delta.dot(ball.velocity) * delta)
-                        //             * BODY_BOUNCYNESS,
-                        //         dt,
-                        //     );
-                        // }
-
                         // DELETE
                         if !self.balls_marked_for_delete.contains(&near.payload) {
                             self.balls_marked_for_delete.push(near.payload);
@@ -387,29 +345,20 @@ impl GardenLevel {
             &quad_tree::Rect::new(mouse_pos.x, mouse_pos.y, dist_check, dist_check),
             &mut near_balls,
         );
+        
+        if is_mouse_button_pressed(MouseButton::Left) {
+            let ball_vel = (mouse_pos - self.player.position).normalize() * 7.;
+            let ball = Ball::new(
+                self.player.position,
+                ball_vel,
+                BALL_RADII * 2.,
+                BALL_MASS * 2.,
+                colors::BLUE,
+            );
 
-        match ui_action {
-            UIActions::None => {
-                if is_mouse_button_pressed(MouseButton::Left) {
-                    let ball_vel = (mouse_pos - self.player.position).normalize() * 7.;
-                    let ball = Ball::new(
-                        self.player.position,
-                        ball_vel,
-                        BALL_RADII * 2.,
-                        BALL_MASS * 2.,
-                        colors::BLUE,
-                    );
-
-                    self.balls.push(ball);
-                }
-            }
-            UIActions::Anticlockwise => {
-                self.player.azimut_speed = -1.;
-            }
-            UIActions::Clockwise => {
-                self.player.azimut_speed = 1.;
-            }
+            self.balls.push(ball);
         }
+             
 
         if !self.balls.iter().any(|ball| ball.color == BAD_BALL_COLOR) {
             return GameOver::game_over(self.balls.len() as i32, self.level_parameters);
@@ -450,37 +399,5 @@ impl GardenLevel {
         // }
 
         set_default_camera();
-    }
-
-    fn update_ui(&self) -> UIActions {
-        // root_ui().push_skin(&self.anticlockwise_skin);
-        // root_ui().button(
-        //     vec2(
-        //         self.anticlockwise_btn_rect.left,
-        //         self.anticlockwise_btn_rect.up,
-        //     ),
-        //     "",
-        // );
-        // root_ui().pop_skin();
-
-        // root_ui().push_skin(&self.clockwise_skin);
-        // root_ui().button(
-        //     vec2(self.clockwise_btn_rect.left, self.anticlockwise_btn_rect.up),
-        //     "",
-        // );
-        // root_ui().pop_skin();
-
-        // let mouse_pos = Vec2::from(mouse_position());
-        // if is_mouse_button_down(MouseButton::Left) {
-        //     if self.anticlockwise_btn_rect.contains(mouse_pos) {
-        //         return UIActions::Anticlockwise;
-        //     }
-
-        //     if self.clockwise_btn_rect.contains(mouse_pos) {
-        //         return UIActions::Clockwise;
-        //     }
-        // }
-
-        return UIActions::None;
     }
 }
