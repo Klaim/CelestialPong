@@ -2,7 +2,7 @@
 // other usefull link https://arrowinmyknee.com/2021/03/15/some-math-about-capsule-collision/
 
 use macroquad::{
-    color::{self, colors},
+    color::{self, colors, hsl_to_rgb, rgb_to_hsl},
     prelude::*,
     rand::{srand, RandomRange},
 };
@@ -88,14 +88,10 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
 
         let bad_seed = index < 20;
 
+        
         let color = match bad_seed {
             true => BAD_BALL_COLOR,
-            false => Color {
-                r: RandomRange::gen_range(0.75, 0.97),
-                g: RandomRange::gen_range(0.55, 0.97),
-                b: RandomRange::gen_range(0.65, 0.99),
-                a: 1.,
-            },
+            false => hsl_to_rgb(RandomRange::gen_range(0., 1.), RandomRange::gen_range(0.45,0.95), RandomRange::gen_range(0.65, 0.99)),
         };
 
         let radius = match bad_seed {
@@ -390,6 +386,11 @@ impl GardenLevel {
 
         for ball in &self.balls {
             ball.draw();
+            if ball.color == BAD_BALL_COLOR {
+                let outline_color = Color { r: 1.0, g: 0.4, b: 0.1, a: 1.0 };
+                
+                draw_circle_lines(ball.position.x, ball.position.y, ball.radius - 2., 4., outline_color);
+            }
         }
 
         for body in &self.static_bodies {

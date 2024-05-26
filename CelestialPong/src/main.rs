@@ -40,7 +40,6 @@ async fn main() {
     let mut fps_index: usize = 0;
 
     loop {
-        let frame_start = get_time();
         if is_key_pressed(KeyCode::Up) {
             frame_per_frame = frame_per_frame + 1;
         }
@@ -91,13 +90,6 @@ async fn main() {
                 next_level
             }
         };
-
-        let elapsed_time = get_time() - frame_start;
-        let time_since_framerate = (1. / 120.) - elapsed_time;
-
-        if time_since_framerate > 0. {
-            std::thread::sleep(std::time::Duration::from_millis((time_since_framerate * 1000.) as u64));
-        }
 
         next_frame().await
     }
