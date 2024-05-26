@@ -93,7 +93,7 @@ async fn main() {
         };
 
         let elapsed_time = get_time() - frame_start;
-        let time_since_framerate = (1. / 61.) - elapsed_time;
+        let time_since_framerate = (1. / 120.) - elapsed_time;
 
         if time_since_framerate > 0. {
             std::thread::sleep(std::time::Duration::from_millis((time_since_framerate * 1000.) as u64));

@@ -34,7 +34,7 @@ const ORBIT_TRAP_SIZE: f32 = 9.;
 const MIN_START_ORBIT: f32 = 220.;
 const MAX_START_ORBIT: f32 = 321.;
 
-const TRACE_SIZE: usize = 1000;
+const TRACE_SIZE: usize = 5000;
 
 const BAD_BALL_COLOR: Color = Color {
     r: 0.9,
@@ -91,9 +91,9 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
         let color = match bad_seed {
             true => BAD_BALL_COLOR,
             false => Color {
-                r: 0.75,
-                g: 0.75,
-                b: 0.9,
+                r: RandomRange::gen_range(0.75, 0.97),
+                g: RandomRange::gen_range(0.55, 0.97),
+                b: RandomRange::gen_range(0.65, 0.99),
                 a: 1.,
             },
         };
@@ -381,6 +381,11 @@ impl GardenLevel {
 
         set_camera(&self.main_camera);
 
+        // Draw trace objects
+        // for trace in self.traces {
+        //     draw_circle(trace.x, trace.y, 1., colors::BLUE);
+        // }
+
         self.player.draw();
 
         for ball in &self.balls {
@@ -392,12 +397,6 @@ impl GardenLevel {
         }
 
         // quad_tree.debug_draw();
-
-        // Draw trace objects
-        // for trace in traces {
-        //     draw_circle(trace.x, trace.y, 1., colors::BLUE);
-        // }
-
         set_default_camera();
     }
 }
