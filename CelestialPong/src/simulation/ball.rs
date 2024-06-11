@@ -1,6 +1,15 @@
-use macroquad::prelude::*;
+use macroquad::{color::colors, prelude::*};
 
 use crate::simulation::quad_tree;
+
+#[derive(Clone, Copy, PartialEq, Debug)]
+pub enum BallType {
+    Body,
+    Ball,
+    BadBall,
+    GoodBall,
+    Projectil,
+}
 
 #[derive(Clone, Copy, PartialEq, Debug)]
 pub struct Ball {
@@ -10,10 +19,23 @@ pub struct Ball {
     pub radius: f32,
     pub mass: f32,
     pub color: Color,
+    pub rotation: f32,
+    pub spin: f32,
+    pub ball_type: BallType,
+    pub double_radius: f32,
 }
 
 impl Ball {
-    pub fn new(position: Vec2, velocity: Vec2, radius: f32, mass: f32, color: Color) -> Ball {
+    pub fn new(
+        position: Vec2,
+        velocity: Vec2,
+        radius: f32,
+        mass: f32,
+        color: Color,
+        rotation: f32,
+        spin: f32,
+        ball_type: BallType,
+    ) -> Ball {
         Ball {
             position,
             prev_position: position - velocity,
@@ -21,6 +43,10 @@ impl Ball {
             radius,
             mass,
             color,
+            rotation,
+            spin,
+            ball_type,
+            double_radius: radius * 2.0,
         }
     }
 
@@ -30,9 +56,26 @@ impl Ball {
         quad_tree::Rect::new(p.x, p.y, s, s)
     }
 
-    pub fn draw(&self) {
-        let pos = self.position;
-        draw_circle(pos.x, pos.y, self.radius, self.color);
+    pub fn draw(&self, texture: Option<&Texture2D>) {
+        match texture {
+            Some(texture) => {
+                draw_texture_ex(
+                    &texture,
+                    self.position.x - self.radius,
+                    self.position.y - self.radius,
+                    colors::WHITE,
+                    DrawTextureParams {
+                        dest_size: Some(Vec2::new(self.double_radius, self.double_radius)),
+                        rotation: self.rotation,
+                        ..Default::default()
+                    },
+                );
+            }
+            None => {
+                let pos = self.position;
+                draw_circle(pos.x, pos.y, self.radius, self.color);
+            }
+        }
     }
 
     #[allow(dead_code)]
@@ -42,6 +85,8 @@ impl Ball {
 
         self.prev_position = self.position;
         self.position = pos + self.velocity * dt;
+
+        self.rotation = self.rotation + self.spin * dt;
     }
 
     pub fn update_verlet(&mut self, dt: f32, acc: Vec2) {
@@ -49,6 +94,8 @@ impl Ball {
         self.position = self.position * 2. - self.prev_position + acc * dt * dt;
         self.prev_position = temp_pos;
         self.velocity = (self.position - self.prev_position) / dt;
+
+        self.rotation = self.rotation + self.spin * dt;
     }
 
     pub fn set_velocity(&mut self, velocity: Vec2, dt: f32) {

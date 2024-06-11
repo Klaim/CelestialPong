@@ -1,7 +1,8 @@
 use macroquad::{
     color::colors,
-    math::{vec2, RectOffset},
+    math::{vec2, RectOffset, Vec2},
     text::{draw_text_ex, TextParams},
+    texture::{draw_texture, draw_texture_ex, DrawTextureParams, Texture2D},
     ui::{root_ui, Skin},
     window,
 };
@@ -12,7 +13,7 @@ use super::{garden_level::GardenLevel, sandbox_level::SandboxLevel};
 
 pub struct TitleScreen {
     level_parameters: LevelParameters,
-
+    bg_texture: Texture2D,
     button_skin: Skin,
 }
 
@@ -32,8 +33,14 @@ impl TitleScreen {
             .color_clicked(colors::BEIGE)
             .build();
 
+        let bg_texture = Texture2D::from_file_with_format(
+            include_bytes!("..\\..\\textures\\title_screen.png"),
+            None,
+        );
+
         return TitleScreen {
             level_parameters,
+            bg_texture,
             button_skin: Skin {
                 button_style,
                 ..root_ui().default_skin()
@@ -46,7 +53,7 @@ impl TitleScreen {
         let sky_level = root_ui().button(
             vec2(
                 window::screen_width() / 2. - 20.,
-                window::screen_height() / 2.,
+                window::screen_height() / 2. + 160.,
             ),
             "Start",
         );
@@ -66,14 +73,15 @@ impl TitleScreen {
     }
 
     pub fn draw(&self) {
-        let font_size = 64.;
         let center = vec2(window::screen_width(), window::screen_height()) / 2.;
-        draw_text_ex(
-            "Celestial Garden",
-            center.x - 250.,
-            center.y - 200.,
-            TextParams {
-                font_size: font_size as u16,
+
+        draw_texture_ex(
+            &self.bg_texture,
+            0.0,
+            0.0,
+            colors::WHITE,
+            DrawTextureParams {
+                dest_size: Some(Vec2::new(window::screen_width(), window::screen_height())),
                 ..Default::default()
             },
         );
@@ -81,7 +89,7 @@ impl TitleScreen {
         draw_text_ex(
             "Remove all the bad seed hanging around the planet",
             center.x - 240.,
-            center.y - 100.,
+            center.y + 100.,
             TextParams {
                 font_size: 24,
                 ..Default::default()
@@ -91,7 +99,7 @@ impl TitleScreen {
         draw_text_ex(
             "the more carefull you are, the higher your score!",
             center.x - 200.,
-            center.y - 80.,
+            center.y + 140.,
             TextParams {
                 font_size: 24,
                 ..Default::default()

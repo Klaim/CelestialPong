@@ -58,7 +58,16 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
             },
         };
 
-        let mut ball = Ball::new(position, Vec2::ZERO, RADII, BALL_MASS, color);
+        let mut ball = Ball::new(
+            position,
+            Vec2::ZERO,
+            RADII,
+            BALL_MASS,
+            color,
+            0.0,
+            0.0,
+            BallType::Ball,
+        );
 
         let ball_speed = get_orbital_velocity(&ball, &static_bodies[0]);
 
@@ -127,6 +136,9 @@ impl SandboxLevel {
             30.,
             BODY_MASS,
             color::WHITE,
+            0.0,
+            0.0,
+            BallType::Body,
         ));
 
         reset_balls(&mut self.balls, &self.static_bodies);
@@ -343,7 +355,7 @@ impl SandboxLevel {
             set_camera(&self.main_camera);
 
             for ball in &self.balls {
-                ball.draw();
+                ball.draw(None);
 
                 // ball.get_collision_area().debug_draw(1., ball.color);
 
@@ -374,7 +386,7 @@ impl SandboxLevel {
             }
 
             for body in &self.static_bodies {
-                body.draw();
+                body.draw(None);
             }
 
             // quad_tree.debug_draw();

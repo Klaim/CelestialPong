@@ -9,11 +9,7 @@ use macroquad::{
 
 use crate::{
     levels::{levels::*, title_screen::*},
-    simulation::{
-        ball::*,
-        gravity::*,
-        quad_tree::{ *},
-    },
+    simulation::{ball::*, gravity::*, quad_tree::*},
     visual::radial_gradiant::get_radial_gradient_texture,
 };
 
@@ -88,10 +84,13 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
 
         let bad_seed = index < 20;
 
-        
         let color = match bad_seed {
             true => BAD_BALL_COLOR,
-            false => hsl_to_rgb(RandomRange::gen_range(0., 1.), RandomRange::gen_range(0.45,0.95), RandomRange::gen_range(0.65, 0.99)),
+            false => hsl_to_rgb(
+                RandomRange::gen_range(0., 1.),
+                RandomRange::gen_range(0.45, 0.95),
+                RandomRange::gen_range(0.65, 0.99),
+            ),
         };
 
         let radius = match bad_seed {
@@ -99,7 +98,21 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
             false => BALL_RADII,
         };
 
-        let mut ball = Ball::new(position, Vec2::ZERO, radius, BALL_MASS, color);
+        let ball_type = match bad_seed {
+            true => BallType::BadBall,
+            false => BallType::GoodBall,
+        };
+
+        let mut ball = Ball::new(
+            position,
+            Vec2::ZERO,
+            radius,
+            BALL_MASS,
+            color,
+            RandomRange::gen_range(-std::f32::consts::PI, std::f32::consts::PI),
+            RandomRange::gen_range(-std::f32::consts::PI * 2., std::f32::consts::PI * 2.),
+            ball_type,
+        );
 
         let ball_speed = get_orbital_velocity(&ball, &static_bodies[0]);
 
@@ -126,6 +139,16 @@ pub struct GardenLevel {
     kill_distance_squared: f32,
     level_parameters: LevelParameters,
     background: Texture2D,
+
+    body_texture: Texture2D,
+    good_ball_texture: Texture2D,
+    bad_ball_texture: Texture2D,
+}
+
+enum UIActions {
+    Clockwise,
+    Anticlockwise,
+    None,
 }
 
 impl GardenLevel {
@@ -177,6 +200,20 @@ impl GardenLevel {
                 2.,
             ),
             background,
+            body_texture: Texture2D::from_file_with_format(
+                include_bytes!("..\\..\\textures\\planet.png"),
+                None,
+            ),
+
+            good_ball_texture: Texture2D::from_file_with_format(
+                include_bytes!("..\\..\\textures\\small_flower.png"),
+                None,
+            ),
+
+            bad_ball_texture: Texture2D::from_file_with_format(
+                include_bytes!("..\\..\\textures\\redspikes.png"),
+                None,
+            ),
         };
     }
 
@@ -187,6 +224,9 @@ impl GardenLevel {
             90.,
             BODY_MASS,
             color::WHITE,
+            0.0,
+            0.0,
+            BallType::Body,
         ));
 
         reset_balls(&mut self.balls, &self.static_bodies);
@@ -256,11 +296,11 @@ impl GardenLevel {
                 // Delete balls that have gone too far
                 if ball.position.length_squared() > self.kill_distance_squared {
                     self.balls_marked_for_delete.push(index);
-                }
-                else if ball.color == BAD_BALL_COLOR {
-                    if ball.position.x.abs() > self.level_parameters.window_size[0] / 2. ||
-                        ball.position.y.abs() > self.level_parameters.window_size[1] / 2. {
-                        println!("supressing {} ball", index);    
+                } else if ball.color == BAD_BALL_COLOR {
+                    if ball.position.x.abs() > self.level_parameters.window_size[0] / 2.
+                        || ball.position.y.abs() > self.level_parameters.window_size[1] / 2.
+                    {
+                        println!("supressing {} ball", index);
                         self.balls_marked_for_delete.push(index);
                     }
                 }
@@ -341,7 +381,7 @@ impl GardenLevel {
             &quad_tree::Rect::new(mouse_pos.x, mouse_pos.y, dist_check, dist_check),
             &mut near_balls,
         );
-        
+
         if is_mouse_button_pressed(MouseButton::Left) {
             let ball_vel = (mouse_pos - self.player.position).normalize() * 7.;
             let ball = Ball::new(
@@ -350,11 +390,13 @@ impl GardenLevel {
                 BALL_RADII * 2.,
                 BALL_MASS * 2.,
                 colors::BLUE,
+                0.0,
+                0.0,
+                BallType::Projectil,
             );
 
             self.balls.push(ball);
         }
-             
 
         if !self.balls.iter().any(|ball| ball.color == BAD_BALL_COLOR) {
             return GameOver::game_over(self.balls.len() as i32, self.level_parameters);
@@ -385,16 +427,15 @@ impl GardenLevel {
         self.player.draw();
 
         for ball in &self.balls {
-            ball.draw();
-            if ball.color == BAD_BALL_COLOR {
-                let outline_color = Color { r: 1.0, g: 0.4, b: 0.1, a: 1.0 };
-                
-                draw_circle_lines(ball.position.x, ball.position.y, ball.radius - 2., 4., outline_color);
-            }
+            let texture = match ball.ball_type {
+                BallType::BadBall => Some(&self.bad_ball_texture),
+                _ => Some(&self.good_ball_texture),
+            };
+            ball.draw(texture);
         }
 
         for body in &self.static_bodies {
-            body.draw();
+            body.draw(Some(&self.body_texture));
         }
 
         // quad_tree.debug_draw();
