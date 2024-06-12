@@ -18,8 +18,11 @@ use crate::{simulation::quad_tree, SIMULATION_DT};
 use super::game_over::GameOver;
 
 const NB_BALLS: usize = 300;
-const BALL_RADII: f32 = 4.;
+const BALL_RADII: f32 = 7.;
 const BALL_MASS: f32 = 40.;
+
+const NB_BAD_BALLS: usize = 20;
+const NB_SEED: usize = 10;
 
 const BODY_MASS: f32 = 10000000.;
 // const BODY_BOUNCYNESS: f32 = 0.9;
@@ -27,8 +30,8 @@ const BODY_MASS: f32 = 10000000.;
 const ORBIT_TRAP: f32 = 10.0;
 const ORBIT_TRAP_SIZE: f32 = 9.;
 
-const MIN_START_ORBIT: f32 = 220.;
-const MAX_START_ORBIT: f32 = 321.;
+const MIN_START_ORBIT: f32 = 210.;
+const MAX_START_ORBIT: f32 = 351.;
 
 const TRACE_SIZE: usize = 5000;
 
@@ -67,6 +70,11 @@ impl Player {
     }
 }
 
+struct SeededFlower {
+    position: Vec2,
+    rotation: f32,
+}
+
 fn random_orbital_pos(center: Vec2, min_radius: f32, max_radius: f32) -> Vec2 {
     let angle = RandomRange::gen_range(0., std::f32::consts::PI * 2.);
     let result = Vec2::from((angle.cos(), angle.sin()));
@@ -82,25 +90,27 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
         let position =
             random_orbital_pos(static_bodies[0].position, MIN_START_ORBIT, MAX_START_ORBIT);
 
-        let bad_seed = index < 20;
+        let ball_type = match index < NB_BAD_BALLS {
+            true => BallType::BadBall,
+            false => match index < NB_BAD_BALLS + NB_SEED {
+                true => BallType::GoodBall,
+                false => BallType::Ball,
+            },
+        };
 
-        let color = match bad_seed {
-            true => BAD_BALL_COLOR,
-            false => hsl_to_rgb(
+        let color = match ball_type {
+            BallType::BadBall => BAD_BALL_COLOR,
+            _ => hsl_to_rgb(
                 RandomRange::gen_range(0., 1.),
                 RandomRange::gen_range(0.45, 0.95),
                 RandomRange::gen_range(0.65, 0.99),
             ),
         };
 
-        let radius = match bad_seed {
-            true => BALL_RADII * 1.4,
-            false => BALL_RADII,
-        };
-
-        let ball_type = match bad_seed {
-            true => BallType::BadBall,
-            false => BallType::Ball,
+        let radius = match ball_type {
+            BallType::BadBall => BALL_RADII * 1.3,
+            BallType::GoodBall => BALL_RADII * 1.5,
+            _ => BALL_RADII,
         };
 
         let mut ball = Ball::new(
@@ -136,13 +146,17 @@ pub struct GardenLevel {
     traces: [Vec2; TRACE_SIZE],
     trace_index: usize,
 
+    seeded_flowers: Vec<SeededFlower>,
+
     kill_distance_squared: f32,
     level_parameters: LevelParameters,
     background: Texture2D,
 
     body_texture: Texture2D,
-    good_ball_texture: Texture2D,
+    ball_texture: Texture2D,
     bad_ball_texture: Texture2D,
+    seed_texture: Texture2D,
+    seeded_flower_texture: Texture2D,
 }
 
 enum UIActions {
@@ -199,19 +213,30 @@ impl GardenLevel {
                 level_parameters.window_size[0] * f32::sqrt(2.) / 2.,
                 2.,
             ),
+            seeded_flowers: Vec::new(),
             background,
             body_texture: Texture2D::from_file_with_format(
                 include_bytes!("..\\..\\textures\\planet.png"),
                 None,
             ),
 
-            good_ball_texture: Texture2D::from_file_with_format(
-                include_bytes!("..\\..\\textures\\small_flower.png"),
+            ball_texture: Texture2D::from_file_with_format(
+                include_bytes!("..\\..\\textures\\flower5.png"),
                 None,
             ),
 
             bad_ball_texture: Texture2D::from_file_with_format(
                 include_bytes!("..\\..\\textures\\spike_v2.png"),
+                None,
+            ),
+
+            seed_texture: Texture2D::from_file_with_format(
+                include_bytes!("..\\..\\textures\\seed_v2.png"),
+                None,
+            ),
+
+            seeded_flower_texture: Texture2D::from_file_with_format(
+                include_bytes!("..\\..\\textures\\flower4.png"),
                 None,
             ),
         };
@@ -240,6 +265,7 @@ impl GardenLevel {
         if is_key_down(KeyCode::R) {
             srand(1);
             reset_balls(&mut self.balls, &self.static_bodies);
+            self.seeded_flowers.clear();
         }
 
         if is_key_pressed(KeyCode::Backspace) {
@@ -296,11 +322,10 @@ impl GardenLevel {
                 // Delete balls that have gone too far
                 if ball.position.length_squared() > self.kill_distance_squared {
                     self.balls_marked_for_delete.push(index);
-                } else if ball.color == BAD_BALL_COLOR {
+                } else if ball.ball_type == BallType::BadBall {
                     if ball.position.x.abs() > self.level_parameters.window_size[0] / 2.
                         || ball.position.y.abs() > self.level_parameters.window_size[1] / 2.
                     {
-                        println!("supressing {} ball", index);
                         self.balls_marked_for_delete.push(index);
                     }
                 }
@@ -351,6 +376,13 @@ impl GardenLevel {
                         // DELETE
                         if !self.balls_marked_for_delete.contains(&near.payload) {
                             self.balls_marked_for_delete.push(near.payload);
+                            if ball.ball_type == BallType::GoodBall {
+                                self.seeded_flowers.push(SeededFlower {
+                                    position: ball.position
+                                        + (body.position - ball.position).normalize() * ball.radius,
+                                    rotation: ball.rotation,
+                                });
+                            }
                         }
                     }
                 }
@@ -387,7 +419,7 @@ impl GardenLevel {
             let ball = Ball::new(
                 self.player.position,
                 ball_vel,
-                BALL_RADII * 2.,
+                BALL_RADII * 1.2,
                 BALL_MASS * 2.,
                 colors::BLUE,
                 0.0,
@@ -398,8 +430,18 @@ impl GardenLevel {
             self.balls.push(ball);
         }
 
-        if !self.balls.iter().any(|ball| ball.color == BAD_BALL_COLOR) {
-            return GameOver::game_over(self.balls.len() as i32, self.level_parameters);
+        if !self
+            .balls
+            .iter()
+            .any(|ball| ball.ball_type == BallType::BadBall)
+        {
+            let score = self
+                .balls
+                .iter()
+                .filter(|ball| ball.ball_type == BallType::Ball)
+                .count()
+                + self.seeded_flowers.len() * 10;
+            return GameOver::game_over(score as i32, self.level_parameters);
         }
 
         return Level::None;
@@ -429,7 +471,8 @@ impl GardenLevel {
         for ball in &self.balls {
             let texture = match ball.ball_type {
                 BallType::BadBall => Some(&self.bad_ball_texture),
-                BallType::Ball => Some(&self.good_ball_texture),
+                BallType::Ball => Some(&self.ball_texture),
+                BallType::GoodBall => Some(&self.seed_texture),
                 _ => None,
             };
             ball.draw(texture);
@@ -437,6 +480,20 @@ impl GardenLevel {
 
         for body in &self.static_bodies {
             body.draw(Some(&self.body_texture));
+        }
+
+        for flower in &self.seeded_flowers {
+            draw_texture_ex(
+                &self.seeded_flower_texture,
+                flower.position.x - 16.,
+                flower.position.y - 16.,
+                colors::WHITE,
+                DrawTextureParams {
+                    dest_size: Some(Vec2::new(32., 32.)),
+                    rotation: flower.rotation,
+                    ..Default::default()
+                },
+            );
         }
 
         // quad_tree.debug_draw();

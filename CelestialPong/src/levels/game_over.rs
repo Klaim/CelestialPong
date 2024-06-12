@@ -52,7 +52,7 @@ impl GameOver {
         draw_text(
             &label,
             center.x + center.x * 0.5,
-            center.y * 0.83,
+            center.y * 0.86,
             font_size,
             colors::WHITE,
         );

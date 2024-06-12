@@ -63,21 +63,11 @@ async fn main() {
         {
             let mean_fps = Iterator::sum::<f32>(fps.iter()) / FPS_FRAMES as f32;
             draw_text_ex(
-                &format!("fps : {:.1}", 1. / mean_fps),
-                32.,
-                32.,
+                &format!("{:.1}", 1. / mean_fps),
+                7.,
+                7.,
                 TextParams {
-                    font_size: 15,
-                    ..Default::default()
-                },
-            );
-
-            draw_text_ex(
-                &format!("Simulation speed : {}", frame_per_frame),
-                32.,
-                50.,
-                TextParams {
-                    font_size: 15,
+                    font_size: 10,
                     ..Default::default()
                 },
             );
