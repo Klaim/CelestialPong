@@ -100,7 +100,7 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
 
         let ball_type = match bad_seed {
             true => BallType::BadBall,
-            false => BallType::GoodBall,
+            false => BallType::Ball,
         };
 
         let mut ball = Ball::new(
@@ -211,7 +211,7 @@ impl GardenLevel {
             ),
 
             bad_ball_texture: Texture2D::from_file_with_format(
-                include_bytes!("..\\..\\textures\\redspikes.png"),
+                include_bytes!("..\\..\\textures\\spike_v2.png"),
                 None,
             ),
         };
@@ -429,7 +429,8 @@ impl GardenLevel {
         for ball in &self.balls {
             let texture = match ball.ball_type {
                 BallType::BadBall => Some(&self.bad_ball_texture),
-                _ => Some(&self.good_ball_texture),
+                BallType::Ball => Some(&self.good_ball_texture),
+                _ => None,
             };
             ball.draw(texture);
         }

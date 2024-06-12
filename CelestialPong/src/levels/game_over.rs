@@ -1,5 +1,6 @@
 use macroquad::{
-    color::colors, input::is_mouse_button_pressed, math::vec2, text::draw_text, window,
+    color::colors, input::is_mouse_button_pressed, math::vec2, prelude::*, text::draw_text,
+    texture::Texture2D, window,
 };
 
 use crate::levels::levels::*;
@@ -9,12 +10,17 @@ use super::title_screen::TitleScreen;
 pub struct GameOver {
     level_parameters: LevelParameters,
     final_score: i32,
+    texture: Texture2D,
 }
 
 impl GameOver {
     pub fn game_over(final_score: i32, level_parameters: LevelParameters) -> Level {
         return Level::GameOver(GameOver {
             level_parameters,
+            texture: Texture2D::from_file_with_format(
+                include_bytes!("..\\..\\textures\\end_screen.png"),
+                None,
+            ),
             final_score,
         });
     }
@@ -28,24 +34,27 @@ impl GameOver {
     }
 
     pub fn draw(&self) {
-        let font_size = 28.;
+        let font_size = 42.;
         let center = vec2(window::screen_width(), window::screen_height()) / 2.;
-        draw_text(
-            "Congratulation!",
-            center.x - 64.,
-            center.y - font_size * 2.,
-            font_size + 10.,
-            colors::GOLD,
+
+        draw_texture_ex(
+            &self.texture,
+            0.0,
+            center.y / 2.,
+            colors::WHITE,
+            DrawTextureParams {
+                dest_size: Some(vec2(window::screen_width(), window::screen_width() / 2.0)),
+                ..Default::default()
+            },
         );
 
-        let label = format!("Score : {}", &self.final_score);
-        let width = label.len() as f32 * font_size;
+        let label = format!("{}", &self.final_score);
         draw_text(
             &label,
-            center.x - width / 4.,
-            center.y,
+            center.x + center.x * 0.5,
+            center.y * 0.83,
             font_size,
-            colors::GOLD,
+            colors::WHITE,
         );
     }
 }

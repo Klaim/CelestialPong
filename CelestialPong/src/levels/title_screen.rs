@@ -2,14 +2,14 @@ use macroquad::{
     color::colors,
     math::{vec2, RectOffset, Vec2},
     text::{draw_text_ex, TextParams},
-    texture::{draw_texture, draw_texture_ex, DrawTextureParams, Texture2D},
+    texture::{draw_texture_ex, DrawTextureParams, Texture2D},
     ui::{root_ui, Skin},
     window,
 };
 
 use crate::levels::levels::*;
 
-use super::{garden_level::GardenLevel, sandbox_level::SandboxLevel};
+use super::{garden_level::GardenLevel, sandbox_level::SandboxLevel, tutorial::Tutorial};
 
 pub struct TitleScreen {
     level_parameters: LevelParameters,
@@ -64,7 +64,7 @@ impl TitleScreen {
         root_ui().pop_skin();
 
         if sky_level {
-            return Level::GardenLevel(GardenLevel::new(self.level_parameters));
+            return Level::Tutorial(Tutorial::new(self.level_parameters));
         } else if sandbox_level {
             return Level::SandboxLevel(SandboxLevel::new(self.level_parameters));
         }
