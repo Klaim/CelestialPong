@@ -70,6 +70,11 @@ impl Ball {
                         ..Default::default()
                     },
                 );
+
+                if self.ball_type == BallType::Ball {
+                    let pos = self.position;
+                    draw_circle(pos.x, pos.y, self.radius * 0.3, self.color);
+                }
             }
             None => {
                 let pos = self.position;

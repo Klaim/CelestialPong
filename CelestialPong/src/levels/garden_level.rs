@@ -102,14 +102,14 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
             BallType::BadBall => BAD_BALL_COLOR,
             _ => hsl_to_rgb(
                 RandomRange::gen_range(0., 1.),
-                RandomRange::gen_range(0.45, 0.95),
-                RandomRange::gen_range(0.65, 0.99),
+                RandomRange::gen_range(0.65, 0.95),
+                RandomRange::gen_range(0.45, 0.69),
             ),
         };
 
         let radius = match ball_type {
             BallType::BadBall => BALL_RADII * 1.3,
-            BallType::GoodBall => BALL_RADII * 1.5,
+            BallType::GoodBall => BALL_RADII * 0.8,
             _ => BALL_RADII,
         };
 
@@ -157,12 +157,6 @@ pub struct GardenLevel {
     bad_ball_texture: Texture2D,
     seed_texture: Texture2D,
     seeded_flower_texture: Texture2D,
-}
-
-enum UIActions {
-    Clockwise,
-    Anticlockwise,
-    None,
 }
 
 impl GardenLevel {
