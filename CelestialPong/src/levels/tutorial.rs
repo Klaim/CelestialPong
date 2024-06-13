@@ -1,7 +1,7 @@
 use macroquad::{
     color::colors,
     input::is_mouse_button_pressed,
-    math::{vec2, Vec2},
+    math::Vec2,
     prelude::*,
     texture::{DrawTextureParams, Texture2D},
     window,

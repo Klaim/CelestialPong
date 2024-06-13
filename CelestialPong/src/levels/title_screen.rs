@@ -9,7 +9,7 @@ use macroquad::{
 
 use crate::levels::levels::*;
 
-use super::{garden_level::GardenLevel, sandbox_level::SandboxLevel, tutorial::Tutorial};
+use super::{sandbox_level::SandboxLevel, tutorial::Tutorial};
 
 pub struct TitleScreen {
     level_parameters: LevelParameters,
@@ -87,30 +87,11 @@ impl TitleScreen {
         );
 
         draw_text_ex(
-            "Remove all the bad seed hanging around the planet",
-            center.x - 240.,
-            center.y + 100.,
-            TextParams {
-                font_size: 24,
-                ..Default::default()
-            },
-        );
-
-        draw_text_ex(
-            "the more carefull you are, the higher your score!",
-            center.x - 200.,
-            center.y + 140.,
-            TextParams {
-                font_size: 24,
-                ..Default::default()
-            },
-        );
-
-        draw_text_ex(
             "By AntonMakesGames",
-            10.,
-            center.y * 2. - 5.,
+            40.,
+            center.y * 2. - 7.,
             TextParams {
+                font_size: 28,
                 ..Default::default()
             },
         );

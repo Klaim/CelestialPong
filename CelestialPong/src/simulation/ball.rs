@@ -1,4 +1,4 @@
-use macroquad::{color::colors, prelude::*};
+use macroquad::prelude::*;
 
 use crate::simulation::quad_tree;
 
@@ -63,7 +63,7 @@ impl Ball {
                     &texture,
                     self.position.x - self.radius,
                     self.position.y - self.radius,
-                    colors::WHITE,
+                    self.color,
                     DrawTextureParams {
                         dest_size: Some(Vec2::new(self.double_radius, self.double_radius)),
                         rotation: self.rotation,

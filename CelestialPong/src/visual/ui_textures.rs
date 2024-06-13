@@ -2,6 +2,7 @@ use macroquad::color::colors;
 use macroquad::prelude::*;
 use macroquad::ui::{root_ui, Skin};
 
+#[allow(dead_code)]
 fn get_circle_arrow_material() -> Material {
     let material = load_material(
         ShaderSource::Glsl {
@@ -17,6 +18,7 @@ fn get_circle_arrow_material() -> Material {
     return material;
 }
 
+#[allow(dead_code)]
 fn render_material_to_texture(
     material: Material,
     width: u32,
@@ -45,6 +47,7 @@ fn render_material_to_texture(
     return render_target.texture;
 }
 
+#[allow(dead_code)]
 pub fn get_circe_arrow(width: u32, height: u32, color: Color) -> Texture2D {
     let render_target = render_target(width, height);
     render_target.texture.set_filter(FilterMode::Nearest);
@@ -55,6 +58,7 @@ pub fn get_circe_arrow(width: u32, height: u32, color: Color) -> Texture2D {
     return render_material_to_texture(material, width, height, color);
 }
 
+#[allow(dead_code)]
 pub fn get_circe_arrow_flipped(width: u32, height: u32, color: Color) -> Texture2D {
     let render_target = render_target(width, height);
     render_target.texture.set_filter(FilterMode::Nearest);
@@ -65,6 +69,7 @@ pub fn get_circe_arrow_flipped(width: u32, height: u32, color: Color) -> Texture
     return render_material_to_texture(material, width, height, color);
 }
 
+#[allow(dead_code)]
 fn get_skin(width: f32, height: f32, base: Image, hovered: Image, clicked: Image) -> Skin {
     let style = root_ui()
         .style_builder()
@@ -86,6 +91,7 @@ fn get_skin(width: f32, height: f32, base: Image, hovered: Image, clicked: Image
     };
 }
 
+#[allow(dead_code)]
 pub fn get_anti_clockwise_skin(width: f32, height: f32) -> Skin {
     let texture = get_circe_arrow(width as u32, height as u32, colors::WHITE).get_texture_data();
     let hovered =
@@ -95,6 +101,7 @@ pub fn get_anti_clockwise_skin(width: f32, height: f32) -> Skin {
     return get_skin(width, height, texture, hovered, clicked);
 }
 
+#[allow(dead_code)]
 pub fn get_clockwise_skin(width: f32, height: f32) -> Skin {
     let texture =
         get_circe_arrow_flipped(width as u32, height as u32, colors::WHITE).get_texture_data();
@@ -106,6 +113,7 @@ pub fn get_clockwise_skin(width: f32, height: f32) -> Skin {
     return get_skin(width, height, texture, hovered, clicked);
 }
 
+#[allow(dead_code)]
 const DEFAULT_VERTEX_SHADER: &'static str = "#version 100
 precision lowp float;
 
@@ -127,6 +135,7 @@ void main() {
 }
 ";
 
+#[allow(dead_code)]
 const ARROW_FRAGMENT_SHADER: &'static str = "#version 100
 precision lowp float;
 

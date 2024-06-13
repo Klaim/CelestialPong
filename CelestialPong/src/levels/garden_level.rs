@@ -2,7 +2,7 @@
 // other usefull link https://arrowinmyknee.com/2021/03/15/some-math-about-capsule-collision/
 
 use macroquad::{
-    color::{self, colors, hsl_to_rgb, rgb_to_hsl},
+    color::{self, colors, hsl_to_rgb},
     prelude::*,
     rand::{srand, RandomRange},
 };
@@ -22,7 +22,7 @@ const BALL_RADII: f32 = 7.;
 const BALL_MASS: f32 = 40.;
 
 const NB_BAD_BALLS: usize = 20;
-const NB_SEED: usize = 10;
+const NB_SEED: usize = 15;
 
 const BODY_MASS: f32 = 10000000.;
 // const BODY_BOUNCYNESS: f32 = 0.9;
@@ -34,13 +34,6 @@ const MIN_START_ORBIT: f32 = 210.;
 const MAX_START_ORBIT: f32 = 351.;
 
 const TRACE_SIZE: usize = 5000;
-
-const BAD_BALL_COLOR: Color = Color {
-    r: 0.9,
-    g: 0.1,
-    b: 0.1,
-    a: 1.,
-};
 
 struct Player {
     position: Vec2,
@@ -99,11 +92,11 @@ fn reset_balls(balls: &mut Vec<Ball>, static_bodies: &Vec<Ball>) {
         };
 
         let color = match ball_type {
-            BallType::BadBall => BAD_BALL_COLOR,
+            BallType::BadBall | BallType::GoodBall => WHITE,
             _ => hsl_to_rgb(
                 RandomRange::gen_range(0., 1.),
-                RandomRange::gen_range(0.65, 0.95),
-                RandomRange::gen_range(0.45, 0.69),
+                RandomRange::gen_range(0.45, 0.95),
+                RandomRange::gen_range(0.65, 0.99),
             ),
         };
 
@@ -210,12 +203,12 @@ impl GardenLevel {
             seeded_flowers: Vec::new(),
             background,
             body_texture: Texture2D::from_file_with_format(
-                include_bytes!("..\\..\\textures\\planet.png"),
+                include_bytes!("..\\..\\textures\\planet2.png"),
                 None,
             ),
 
             ball_texture: Texture2D::from_file_with_format(
-                include_bytes!("..\\..\\textures\\flower5.png"),
+                include_bytes!("..\\..\\textures\\flower_white.png"),
                 None,
             ),
 
@@ -230,7 +223,7 @@ impl GardenLevel {
             ),
 
             seeded_flower_texture: Texture2D::from_file_with_format(
-                include_bytes!("..\\..\\textures\\flower4.png"),
+                include_bytes!("..\\..\\textures\\flower_sproute.png"),
                 None,
             ),
         };
@@ -371,10 +364,11 @@ impl GardenLevel {
                         if !self.balls_marked_for_delete.contains(&near.payload) {
                             self.balls_marked_for_delete.push(near.payload);
                             if ball.ball_type == BallType::GoodBall {
+                                let direction = (body.position - ball.position).normalize();
                                 self.seeded_flowers.push(SeededFlower {
-                                    position: ball.position
-                                        + (body.position - ball.position).normalize() * ball.radius,
-                                    rotation: ball.rotation,
+                                    position: ball.position + direction * ball.radius * -1.5,
+                                    rotation: -direction.angle_between(vec2(0.0, 1.0))
+                                        + RandomRange::gen_range(-0.22, 0.22),
                                 });
                             }
                         }
@@ -470,6 +464,14 @@ impl GardenLevel {
                 _ => None,
             };
             ball.draw(texture);
+            if ball.ball_type == BallType::Ball {
+                draw_circle(
+                    ball.position.x,
+                    ball.position.y,
+                    ball.radius / 4.,
+                    hsl_to_rgb(0.65, 0.80, 0.65),
+                );
+            }
         }
 
         for body in &self.static_bodies {
@@ -483,7 +485,7 @@ impl GardenLevel {
                 flower.position.y - 16.,
                 colors::WHITE,
                 DrawTextureParams {
-                    dest_size: Some(Vec2::new(32., 32.)),
+                    dest_size: Some(Vec2::new(20., 40.)),
                     rotation: flower.rotation,
                     ..Default::default()
                 },
