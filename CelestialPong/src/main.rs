@@ -4,6 +4,7 @@
 mod levels;
 mod simulation;
 mod visual;
+mod audio;
 
 use levels::levels::{Level, LevelParameters};
 use levels::title_screen::TitleScreen;
@@ -38,6 +39,9 @@ async fn main() {
     let mut frame_per_frame: usize = 1;
     let mut fps: [f32; FPS_FRAMES] = [0.; FPS_FRAMES];
     let mut fps_index: usize = 0;
+
+
+    audio::start_bgm().await;
 
     loop {
         if is_key_pressed(KeyCode::Up) {
