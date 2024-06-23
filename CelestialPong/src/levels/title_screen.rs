@@ -87,9 +87,19 @@ impl TitleScreen {
         );
 
         draw_text_ex(
-            "By AntonMakesGames",
+            "Game by AntonMakesGames",
+            30.,
+            center.y * 2. - 25.,
+            TextParams {
+                font_size: 28,
+                ..Default::default()
+            },
+        );
+
+        draw_text_ex(
+            "Music by Klaim!",
             40.,
-            center.y * 2. - 7.,
+            center.y * 2. - 5.,
             TextParams {
                 font_size: 28,
                 ..Default::default()
